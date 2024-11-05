@@ -209,10 +209,10 @@ class MyDataset(Dataset):
         self.hindcast_length = hindcast_length
         self.forecast_horizon = forecast_horizon
 
-        self.num_basins = self.dynamic_ds.dims['basin']
-        num_days = (self.end_date - self.start_date).astype(np.int32) + 1
-        self.slide_wnd = self.hindcast_length + self.forecast_horizon
-        self.num_samples_per_basin = (num_days - self.slide_wnd + 1)
+        self.num_basins = self.dynamic_ds.dims['basin']     # 数据集中流域的总数目
+        num_days = (self.end_date - self.start_date).astype(np.int32) + 1   # 数据集中的总天数
+        self.slide_wnd = self.hindcast_length + self.forecast_horizon   # 根据后顾时间长度和预测时间长度计算滑动窗口长度
+        self.num_samples_per_basin = (num_days - self.slide_wnd + 1)    # 计算数据集中包含的天数可以切分出多少训练数据
     
     def __len__(self):
         return self.num_basins * self.num_samples_per_basin
@@ -226,32 +226,45 @@ class MyDataset(Dataset):
         # 计算本样本的开始时间和结束时间
         start_date = self.start_date + sample_idx
         end_date = start_date + self.slide_wnd - 1
-        
-        # 将开始时间和结束时间转换为字符串形式
-        # start_date = start_date.strftime('%Y-%m-%d')
-        # end_date = end_date.strftime('%Y-%m-%d')
-        
+
+        # 筛选本样本的具体数据        
         sample = self.dynamic_ds.sel(date=slice(start_date, end_date))
         sample = sample.isel(basin=basin_idx)
         
-        hindcast_sample = sample.isel(date=slice(0, 365))
-        forecast_sample = sample.isel(date=slice(-7, None))
+        # 切分成后顾数据和预测数据
+        hindcast_sample = sample.isel(date=slice(0, self.hindcast_length))
+        forecast_sample = sample.isel(date=slice(-self.forecast_horizon, None))
         
+        # 将x, y从数据集中取出
         x_h = hindcast_sample[['dayl(s)', 'prcp(mm/day)', 'srad(W/m2)', 'swe(mm)', 'tmax(C)', 'tmin(C)', 'vp(Pa)']]
         x_f = forecast_sample[['dayl(s)', 'prcp(mm/day)', 'srad(W/m2)', 'swe(mm)', 'tmax(C)', 'tmin(C)', 'vp(Pa)']]
         y = forecast_sample['QObs(mm/d)']
 
+        # 转换成torch.Tensor
         x_h = x_h.to_array(dim='variable').transpose('date', 'variable')
-        x_h = torch.from_numpy(x_h.values)
+        x_h = torch.from_numpy(x_h.values).float()
         
         x_f = x_f.to_array(dim='variable').transpose('date', 'variable')
-        x_f = torch.from_numpy(x_f.values)
+        x_f = torch.from_numpy(x_f.values).float()
 
-        y = torch.from_numpy(y.values)
+        y = torch.from_numpy(y.values).float()
 
         x_s = self.static_ds[basin]
 
         return {'x_h': x_h, 'x_f': x_f, 'x_s': x_s, 'y': y}
+
+class DataInterface(object):
+    def __init__(self) -> None:
+        # 加载数据
+        self.basins = load_basin_list(settings.basin_list_dir / '10_basin_list.txt')
+        self.dynamic_ds = load_xarray_dataset(settings.dataset_dir, self.basins)
+        self.attrs = load_camels_us_attributes(settings.dataset_dir, self.basins)
+        self.static_ds = load_static_attributes(self.attrs, settings.attribute_list)
+
+    def get_data_loader(self, start_date: str, end_date: str, batch_size: int = 256):
+        dataset = MyDataset(self.dynamic_ds, self.static_ds, start_date, end_date)
+        return DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
 
 if __name__ == '__main__':
     basins = load_basin_list(settings.basin_list_dir / '10_basin_list.txt')
@@ -261,10 +274,9 @@ if __name__ == '__main__':
     ds = MyDataset(dataset, static_ds, '1989-06-04', '1996-06-04')
     loader = DataLoader(ds, 32, True)
 
+    print(len(ds))
+    cnt = 0
     for i in loader:
-        print(i['x_h'].shape)
-        print(i['x_f'].shape)
         print(i['x_s'].shape)
-        print(i['y'].shape)
-        input()
-    
+        print(i['x_h'].shape)
+        input()    

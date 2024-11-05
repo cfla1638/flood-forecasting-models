@@ -35,3 +35,5 @@ attribute_list = ['p_mean',
                   'carbonate_rocks_frac',
                   'geol_porostiy'
                   ]
+
+device = 'cuda:0'

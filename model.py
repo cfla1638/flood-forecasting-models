@@ -127,7 +127,7 @@ class MyModel(nn.Module):
         # 后顾网络对历史数据进行处理
         hindcast_output, (h_hindcast_op, c_hindcast_op) = self.hindcast_lstm(
             x_h,
-            (torch.zeros(1, batch_size, self.hidden_dim), torch.zeros(1, batch_size, self.hidden_dim))
+            (torch.zeros(1, batch_size, self.hidden_dim, device=x_h.device), torch.zeros(1, batch_size, self.hidden_dim, device=x_h.device))
         )   # h & c : (1, batch_size, hidden_dim)
 
         # 状态转移网络处理
@@ -155,21 +155,42 @@ class MyModel(nn.Module):
         eps = 1e-5
         mask = ~torch.isnan(y)
         y = y[mask].unsqueeze(1)    # (batch_size * seq_len, 1)
-        m = y_hat['mu'][mask]       # (batch_size * seq_len, num_distribution)
-        b = y_hat['b'][mask]        # (batch_size * seq_len, num_distribution)
-        t = y_hat['tau'][mask]      # (batch_size * seq_len, num_distribution)
-        p = y_hat['pi'][mask]       # (batch_size * seq_len, num_distribution)
+        m = y_hat['mu'][mask]       # (batch_size * seq_len, num_distribution) (no limit)
+        b = y_hat['b'][mask]        # (batch_size * seq_len, num_distribution) (>0)
+        t = y_hat['tau'][mask]      # (batch_size * seq_len, num_distribution) (0-1)
+        p = y_hat['pi'][mask]       # (batch_size * seq_len, num_distribution) (0-1)
 
         error = y - m               # (batch_size * seq_len, num_distribution)
         log_like = torch.log(t) + \
                    torch.log(1.0 - t) - \
                    torch.log(b) - \
                    torch.max(t * error, (t - 1.0) * error) / b
-        log_weights = torch.log(p + eps)
+        log_weights = torch.log(p + eps)    # (batch_size * seq_len, num_distribution)
 
-        result = torch.logsumexp(log_weights + log_like, dim=1)
+        result = torch.logsumexp(log_weights + log_like, dim=1) # batch_size * seq_len
         result = -torch.mean(result)
         return result
+    
+    def predict(self, y_hat: Dict[str, torch.Tensor]):
+        m = y_hat['mu'].detach()
+        p = y_hat['pi'].detach()
+        pred = (m * p).sum(dim=-1)
+        return pred     # batch_size seq_len
+    
+    def NSE(self, y_hat, y):
+        """
+        Parameters:
+         - y_hat: (batch_size, seq_len)
+         - y: (batch_size, seq_len)
+        """
+        mask = ~torch.isnan(y)
+        y = y[mask]
+        y_hat = y_hat[mask]
+
+        denominator = ((y - y.mean())**2).sum()
+        numerator = ((y_hat - y)**2).sum()
+        value = 1 - (numerator / denominator)
+        return float(value)
 
 if __name__ == '__main__':
     model = MyModel(7, 51, 256)
@@ -179,10 +200,12 @@ if __name__ == '__main__':
     x_h = torch.randn(365, 256, 7)
     x_f = torch.randn(7, 256, 7)
     y_hat = model(x_s, x_h, x_f)
-    y = torch.randn(256, 7)
-    loss = model.calculate_loss(y_hat, y)
-    optim.zero_grad()
-    loss.backward()
-    optim.step()
-    print('OK')
+    print(model.predict(y_hat)[0])
+    # y = torch.randn(256, 7)
+    # loss = model.calculate_loss(y_hat, y)
+    # optim.zero_grad()
+    # loss.backward()
+    # optim.step()
+    # print('OK')
+
     
