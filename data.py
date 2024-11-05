@@ -136,6 +136,10 @@ def normalization(dataset: xr.Dataset) -> xr.Dataset:
     """
     mean = dataset.mean()
     std = dataset.std()
+    
+    # 将标准差中的 0 替换为一个很小的值，以避免除零错误
+    std = std.where(std != 0, other=1e-8)
+
     dataset = (dataset - mean) / std
     dataset.attrs['mean'] = mean
     dataset.attrs['std'] = std
@@ -160,15 +164,24 @@ def load_xarray_dataset(data_dir: Path, basins: List[str]) -> xr.Dataset:
 
     # normalization
     dataset = normalization(dataset)
-    
+   
     return dataset
 
 def load_static_attributes(df: pd.DataFrame, attrs: List[str]):
     df = df[attrs]      # 取出指定的属性列
     df = df.fillna(df.mean())   # 填充缺失值
+
     mean = df.mean()    
     std = df.std()
+    
+    # 如果只有一行数据，std 会全部为 0，我们可以直接将 std 设置为 1 来避免除零
+    if len(df) == 1:
+        std = std.fillna(1.0)
+    else:
+        std = std.replace(0, 1e-8)
+
     df = (df - mean) / std  # normalization
+
     return {index : torch.from_numpy(row.values.flatten().astype(np.float32)) for index, row in df.iterrows()}
 
 class MyDataset(Dataset):
@@ -180,9 +193,12 @@ class MyDataset(Dataset):
                  forecast_horizon: int = 7
                  ):
         super().__init__()
+        start_date = np.datetime64(start_date)
+        end_date = np.datetime64(end_date)
+
         if start_date > end_date:
             raise Exception('开始时间不应在结束时间之后!')
-        if (end_date - start_date).astype(np.int32) + 1 > hindcast_length + forecast_horizon:
+        if (end_date - start_date).astype(np.int32) + 1 < hindcast_length + forecast_horizon:
             raise Exception('取样时间范围不能小于滑动窗口长度')
         if (dynamic_ds.coords['date'][0].values > start_date) or (dynamic_ds.coords['date'][-1] < end_date):
             raise Exception('取样时间须在数据集的时间范围内')
@@ -202,20 +218,53 @@ class MyDataset(Dataset):
         return self.num_basins * self.num_samples_per_basin
 
     def __getitem__(self, idx: int):
-        sample_idx = idx % self.num_samples_per_basin
-        basin_idx = idx / self.num_samples_per_basin
-        start_date = pd.to_datetime(self.start_date) + sample_idx
+        # 获取流域id和时间偏移
+        sample_idx = int(idx % self.num_samples_per_basin)
+        basin_idx = int(idx / self.num_samples_per_basin)
+        basin = self.dynamic_ds.coords['basin'][basin_idx].values.item()
+        
+        # 计算本样本的开始时间和结束时间
+        start_date = self.start_date + sample_idx
         end_date = start_date + self.slide_wnd - 1
-        start_date = start_date.strftime('%Y-%m-%d')
-        end_date = end_date.strftime('%Y-%m-%d')
+        
+        # 将开始时间和结束时间转换为字符串形式
+        # start_date = start_date.strftime('%Y-%m-%d')
+        # end_date = end_date.strftime('%Y-%m-%d')
+        
         sample = self.dynamic_ds.sel(date=slice(start_date, end_date))
         sample = sample.isel(basin=basin_idx)
+        
+        hindcast_sample = sample.isel(date=slice(0, 365))
+        forecast_sample = sample.isel(date=slice(-7, None))
+        
+        x_h = hindcast_sample[['dayl(s)', 'prcp(mm/day)', 'srad(W/m2)', 'swe(mm)', 'tmax(C)', 'tmin(C)', 'vp(Pa)']]
+        x_f = forecast_sample[['dayl(s)', 'prcp(mm/day)', 'srad(W/m2)', 'swe(mm)', 'tmax(C)', 'tmin(C)', 'vp(Pa)']]
+        y = forecast_sample['QObs(mm/d)']
 
+        x_h = x_h.to_array(dim='variable').transpose('date', 'variable')
+        x_h = torch.from_numpy(x_h.values)
+        
+        x_f = x_f.to_array(dim='variable').transpose('date', 'variable')
+        x_f = torch.from_numpy(x_f.values)
 
+        y = torch.from_numpy(y.values)
+
+        x_s = self.static_ds[basin]
+
+        return {'x_h': x_h, 'x_f': x_f, 'x_s': x_s, 'y': y}
 
 if __name__ == '__main__':
     basins = load_basin_list(settings.basin_list_dir / '10_basin_list.txt')
     dataset = load_xarray_dataset(settings.dataset_dir, basins)
-    print(dataset.sel(date=slice('1989-06-04', '1992-06-04')))
-    
+    attrs = load_camels_us_attributes(settings.dataset_dir, basins)
+    static_ds = load_static_attributes(attrs, settings.attribute_list)
+    ds = MyDataset(dataset, static_ds, '1989-06-04', '1996-06-04')
+    loader = DataLoader(ds, 32, True)
+
+    for i in loader:
+        print(i['x_h'].shape)
+        print(i['x_f'].shape)
+        print(i['x_s'].shape)
+        print(i['y'].shape)
+        input()
     
