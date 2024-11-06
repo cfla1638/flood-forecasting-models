@@ -18,3 +18,4 @@ configs/*
 data/*
 docs/build/*
 __pycache__
+checkpoints

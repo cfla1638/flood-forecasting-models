@@ -146,7 +146,8 @@ class MyModel(nn.Module):
         forecast_output = forecast_output.transpose(0, 1)   # (batch_size, seq_len, hidden_dim)
         return self.cmal_head(forecast_output)  # (batch_size, seq_len, num_distribution)
     
-    def calculate_loss(self, y_hat: Dict[str, torch.Tensor], y: torch.Tensor):
+    @staticmethod
+    def calculate_loss(y_hat: Dict[str, torch.Tensor], y: torch.Tensor):
         """计算损失
         Parameters:
          - y_hat: (batch_size, seq_len, num_distribution)
@@ -171,13 +172,15 @@ class MyModel(nn.Module):
         result = -torch.mean(result)
         return result
     
-    def predict(self, y_hat: Dict[str, torch.Tensor]):
+    @staticmethod
+    def predict(y_hat: Dict[str, torch.Tensor]):
         m = y_hat['mu'].detach()
         p = y_hat['pi'].detach()
         pred = (m * p).sum(dim=-1)
         return pred     # batch_size seq_len
     
-    def NSE(self, y_hat, y):
+    @staticmethod
+    def NSE(y_hat, y):
         """
         Parameters:
          - y_hat: (batch_size, seq_len)
