@@ -1,28 +1,30 @@
-# from pathlib import Path
-# from neuralhydrology.utils.-config import Config
-# from neuralhydrology.datasetzoo.camelsus import CamelsUS
-# from torch.utils.data import DataLoader
-# from neuralhydrology.nh_run import start_run
-# from datetime import datetime, date
-import numpy as np
+from model import MyModel
+from data import DataInterface
 
-# config_file = Path('./data/config/1_basin.yml')
-# config = Config(config_file)
+import torch
 
-# dataset = CamelsUS(config, is_train=True, period='train')
+model = MyModel(dynamic_input_dim=7,
+                static_input_dim=27,
+                hidden_dim=256)
 
-# # loader = DataLoader(dataset, 256, True, collate_fn=dataset.collate_fn)
-# # for i in loader:
-# #     print(i['x_d'].shape)
-# #     input()
+model.load_state_dict(torch.load('./checkpoints/epoch35.pth', weights_only=True))
+data = DataInterface()
+loader = data.get_data_loader('1996-10-01', '1999-09-30', batch_size=1)
 
-# # print(len(dataset))
-# # print(dataset[0]['x_d'].shape)
-# # print(dataset[0]['y'].shape)
-# for i in range(len(dataset)):
-#     print(dataset[i].keys())
-#     input()
-# # print(dataset[1234]['x_d'])
-a = np.datetime64('2024-09-20')
-b = np.datetime64('2024-09-25')
-print((b-a).astype(np.int32))
+device='cpu'
+model.eval()
+with torch.no_grad():
+    for batch in loader:
+        x_h = batch['x_h'].to(device)
+        x_f = batch['x_f'].to(device)
+        x_s = batch['x_s'].to(device)
+        y = batch['y'].to(device)
+
+        x_h = x_h.transpose(0, 1)
+        x_f = x_f.transpose(0, 1)
+
+        y_hat = model(x_s, x_h, x_f)
+        y_hat = MyModel.predict(y_hat)
+        print(y)
+        print(y_hat)
+        input()

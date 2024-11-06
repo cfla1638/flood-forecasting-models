@@ -256,7 +256,7 @@ class MyDataset(Dataset):
 class DataInterface(object):
     def __init__(self) -> None:
         # 加载数据
-        self.basins = load_basin_list(settings.basin_list_dir / '10_basin_list.txt')
+        self.basins = load_basin_list(settings.basin_list_dir / '32_basin_list.txt')
         self.dynamic_ds = load_xarray_dataset(settings.dataset_dir, self.basins)
         self.attrs = load_camels_us_attributes(settings.dataset_dir, self.basins)
         self.static_ds = load_static_attributes(self.attrs, settings.attribute_list)

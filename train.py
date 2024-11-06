@@ -3,10 +3,16 @@ from data import DataInterface
 from tqdm import tqdm
 from pathlib import Path
 from args import Args
+from loguru import logger
 
 import os
+import sys
 import torch
 import settings
+
+logger.remove()
+logger.add(sys.stdout, level="INFO")
+logger.add("./log/log{time}.log", level="INFO", rotation="20 MB")
 
 class TrainInterface(object):
     def __init__(self, opts) -> None:
@@ -38,7 +44,7 @@ class TrainInterface(object):
 
             losssum += loss.detach().cpu().numpy().item()
             num_batch += 1
-        print(f'Epoch {epoch} | average loss = {losssum / num_batch : .4f}')
+        logger.info(f'Epoch {epoch} | average loss = {losssum / num_batch : .4f}')
 
     
     @staticmethod
@@ -61,15 +67,15 @@ class TrainInterface(object):
                 y_hat = MyModel.predict(y_hat)
                 avg_NSE += MyModel.NSE(y_hat, y)
                 num_batch += 1
-        print(f'Average NSE: {avg_NSE / num_batch: .4f}')
+        logger.info(f'Average NSE: {avg_NSE / num_batch: .4f}')
 
 
     @staticmethod
-    def _save_model(model, epoch, save_dir: Path):
+    def _save_model(model: torch.nn.Module, epoch, save_dir: Path):
         save_dir = Path(save_dir)
-        model_name = f'epoch{epoch}.tar'
+        model_name = f'epoch{epoch}.pth'
         save_path = save_dir / model_name
-        torch.save(model, save_path)
+        torch.save(model.state_dict(), save_path)
     
     def main(self):
         opts = self.opts
@@ -80,12 +86,12 @@ class TrainInterface(object):
         train_loader = data_interface.get_data_loader(opts.train_start_date, opts.train_end_date, opts.batch_size)
         val_loader = data_interface.get_data_loader(opts.val_start_date, opts.val_end_date, opts.batch_size)
 
-        if opts.pretrain is None:
-            model = MyModel(dynamic_input_dim=7,
+        model = MyModel(dynamic_input_dim=7,
                 static_input_dim=27,
                 hidden_dim=256)
-        else:
-            model = torch.load(opts.pretrain)
+
+        if opts.pretrain is not None:
+            model.load_state_dict(torch.load(opts.pretrain, weights_only=True))
         
         if opts.use_GPU:
             device = f'cuda:{opts.GPU_id}'
@@ -93,8 +99,8 @@ class TrainInterface(object):
             device = 'cpu'
         
         optimizer = torch.optim.Adam(model.parameters())
-        print(' - Train on ' + device)
-        print(' - Start training.')
+        logger.info('Train on ' + device)
+        logger.info('Start training.')
         for epoch in range(opts.start_epoch, opts.epoch + 1):
             self._train_epoch(model, train_loader, optimizer, epoch, device)
             if opts.val_freq is not None and epoch % opts.val_freq == 0:
@@ -109,5 +115,5 @@ if __name__ == '__main__':
     train_interface = TrainInterface(args.get_opts())
     train_interface.main()
 
-# python train.py --batch_size=256 --train_start_date=1999-10-01 --train_end_date=2002-09-30 --epoch=10 --save_freq=5 --use_GPU --GPU_id=0
+# python train.py --batch_size=256 --train_start_date=1999-10-01 --train_end_date=2009-09-30 --epoch=50 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --val_start_date=1996-10-01 --val_end_date=1999-09-30
 # python train.py --batch_size=256 --train_start_date=1999-10-01 --train_end_date=2002-09-30 --epoch=20 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --pretrain=./checkpoints/epoch10.tar --val_start_date=1995-10-01 --val_end_date=1997-09-30 --start_epoch=11
