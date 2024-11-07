@@ -6,6 +6,8 @@
 *.swp
 .coverage
 
+bug_fix.py
+
 # folder
 build/*
 dist/*

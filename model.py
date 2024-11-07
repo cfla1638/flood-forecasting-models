@@ -174,6 +174,10 @@ class MyModel(nn.Module):
     
     @staticmethod
     def predict(y_hat: Dict[str, torch.Tensor]):
+        """使用 权重*均值 计算一个batch的所有forecast horizon的预测值 
+        Parameter:
+         - y_hat: 有'mu', 'b', 'tau', 'pi'四个键
+        """
         m = y_hat['mu'].detach()
         p = y_hat['pi'].detach()
         pred = (m * p).sum(dim=-1)
@@ -181,14 +185,14 @@ class MyModel(nn.Module):
     
     @staticmethod
     def NSE(y_hat, y):
-        """
+        """计算一个batch的七天的NSE (Nash-Sutcliffe model efficiency coefficient)
         Parameters:
          - y_hat: (batch_size, seq_len)
          - y: (batch_size, seq_len)
         """
         mask = ~torch.isnan(y)
-        y = y[mask]
-        y_hat = y_hat[mask]
+        y = y[mask]             # (batch_size * seq_len)
+        y_hat = y_hat[mask]     # (batch_size * seq_len)
 
         denominator = ((y - y.mean())**2).sum()
         numerator = ((y_hat - y)**2).sum()
@@ -196,19 +200,4 @@ class MyModel(nn.Module):
         return float(value)
 
 if __name__ == '__main__':
-    model = MyModel(7, 51, 256)
-    model.train()
-    optim = torch.optim.Adam(model.parameters())
-    x_s = torch.randn(256, 51)
-    x_h = torch.randn(365, 256, 7)
-    x_f = torch.randn(7, 256, 7)
-    y_hat = model(x_s, x_h, x_f)
-    print(model.predict(y_hat)[0])
-    # y = torch.randn(256, 7)
-    # loss = model.calculate_loss(y_hat, y)
-    # optim.zero_grad()
-    # loss.backward()
-    # optim.step()
-    # print('OK')
-
-    
+    pass

@@ -129,13 +129,25 @@ def load_basin_list(file_path: Path) -> List[str]:
     with open(file_path, 'r') as f:
         return [basin.strip() for basin in f.readlines()]
     
-def normalization(dataset: xr.Dataset) -> xr.Dataset:
+def normalization(dataset: xr.Dataset, meanstd: pd.DataFrame = None) -> xr.Dataset:
     """标准化
     对一个Dataset中所有流域的所有forcing data进行标准化, 减去均值除以方差, 
     并将均值方差存储在 ``dataset.attrs['mean']`` 和 ``dataset.attrs['std']``
     """
-    mean = dataset.mean()
-    std = dataset.std()
+    if meanstd is None:
+        mean = dataset.mean()
+        std = dataset.std()
+
+        # 保存均值方差
+        m = mean.to_pandas().rename('mean')
+        s = std.to_pandas().rename('std')
+        ms = pd.concat([m, s], axis=1)
+        basin_filename = settings.basins_file.split('.')[0]
+        ms.to_csv(settings.mean_std_dir / ('dynamic_meanstd_' + basin_filename + '.csv'))
+    else:
+        mean = xr.Dataset({var:([], value) for var, value in meanstd['mean'].items()})
+        std = xr.Dataset({var:([], value) for var, value in meanstd['std'].items()})
+
     
     # 将标准差中的 0 替换为一个很小的值，以避免除零错误
     std = std.where(std != 0, other=1e-8)
@@ -145,11 +157,14 @@ def normalization(dataset: xr.Dataset) -> xr.Dataset:
     dataset.attrs['std'] = std
     return dataset
 
-def load_xarray_dataset(data_dir: Path, basins: List[str]) -> xr.Dataset:
+def load_xarray_dataset(data_dir: Path, basins: List[str], meanstd: pd.DataFrame = None) -> xr.Dataset:
     """构造xarray数据集, 并进行标准化
     Parameters:
      - data_dir: CAMELS_US的路径
      - basins: 流域编号的列表
+     - meanstd: 存储数据的均值和方差, 用于对数据进行normalization, 
+                其index要与df加载的属性相同, 默认为None, 表示利用数据本身的均值方差进行标准化.
+                当要用不同流域的数据进行测试时, 需要用训练集的均值方差进行normalization.
     Return:
      - xarray.Dataset: 数据集
     """
@@ -163,17 +178,24 @@ def load_xarray_dataset(data_dir: Path, basins: List[str]) -> xr.Dataset:
     dataset = xr.concat(data_list, dim='basin')
 
     # normalization
-    dataset = normalization(dataset)
+    dataset = normalization(dataset, meanstd)
    
     return dataset
 
-def load_static_attributes(df: pd.DataFrame, attrs: List[str]):
+def load_static_attributes(df: pd.DataFrame, attrs: List[str], meanstd: pd.DataFrame = None):
     df = df[attrs]      # 取出指定的属性列
     df = df.fillna(df.mean())   # 填充缺失值
 
-    mean = df.mean()    
-    std = df.std()
-    
+    if meanstd is None:
+        mean = df.mean().rename('mean')
+        std = df.std().rename('std')
+        ms = pd.concat([mean, std], axis=1)
+        basin_filename = settings.basins_file.split('.')[0]
+        ms.to_csv(settings.mean_std_dir / ('static_meanstd_' + basin_filename + '.csv'))
+    else:
+        mean = meanstd['mean']
+        std = meanstd['std']
+
     # 如果只有一行数据，std 会全部为 0，我们可以直接将 std 设置为 1 来避免除零
     if len(df) == 1:
         std = std.fillna(1.0)
@@ -255,11 +277,19 @@ class MyDataset(Dataset):
 
 class DataInterface(object):
     def __init__(self) -> None:
+        # 加载标准化数据的均值方差
+        dynamic_meanstd = None
+        static_meanstd = None
+        if settings.dynamic_mean_std is not None:
+            dynamic_meanstd = pd.read_csv(settings.mean_std_dir / settings.dynamic_mean_std, index_col=0)
+        if settings.static_mean_std is not None:
+            static_meanstd = pd.read_csv(settings.mean_std_dir / settings.static_mean_std, index_col=0)
+
         # 加载数据
-        self.basins = load_basin_list(settings.basin_list_dir / '32_basin_list.txt')
-        self.dynamic_ds = load_xarray_dataset(settings.dataset_dir, self.basins)
+        self.basins = load_basin_list(settings.basin_list_dir / settings.basins_file)
+        self.dynamic_ds = load_xarray_dataset(settings.dataset_dir, self.basins, dynamic_meanstd)
         self.attrs = load_camels_us_attributes(settings.dataset_dir, self.basins)
-        self.static_ds = load_static_attributes(self.attrs, settings.attribute_list)
+        self.static_ds = load_static_attributes(self.attrs, settings.attribute_list, static_meanstd)
 
     def get_data_loader(self, start_date: str, end_date: str, batch_size: int = 256):
         dataset = MyDataset(self.dynamic_ds, self.static_ds, start_date, end_date)
@@ -267,16 +297,4 @@ class DataInterface(object):
 
 
 if __name__ == '__main__':
-    basins = load_basin_list(settings.basin_list_dir / '10_basin_list.txt')
-    dataset = load_xarray_dataset(settings.dataset_dir, basins)
-    attrs = load_camels_us_attributes(settings.dataset_dir, basins)
-    static_ds = load_static_attributes(attrs, settings.attribute_list)
-    ds = MyDataset(dataset, static_ds, '1989-06-04', '1996-06-04')
-    loader = DataLoader(ds, 32, True)
-
-    print(len(ds))
-    cnt = 0
-    for i in loader:
-        print(i['x_s'].shape)
-        print(i['x_h'].shape)
-        input()    
+    pass
