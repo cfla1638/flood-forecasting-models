@@ -1,12 +1,12 @@
 from pathlib import Path
 
-basin_list_dir = Path('./data/basin_list/')     # 流域编号列表目录
+basin_list_dir = Path('../data/basin_list/')     # 流域编号列表目录
 
-dataset_dir = Path('./data/CAMELS_US')      # 数据集路径
+dataset_dir = Path('../data/CAMELS_US')      # 数据集路径
 
 example_basin = '01013500'  # 供测试使用的流域编号
 
-mean_std_dir = Path('./data/meanstd/')  # 存储均值方差的文件夹
+mean_std_dir = Path('../data/meanstd/')  # 存储均值方差的文件夹
 dynamic_mean_std = None  # 用于标准化动态数据的均值方差, 可以为None
 static_mean_std = None    # 用于标准化静态数据的均值方差, 可以为None
 
