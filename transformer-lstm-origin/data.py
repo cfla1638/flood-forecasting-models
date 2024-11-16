@@ -66,8 +66,31 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
         basins_filename = basins_filename.split('.')[0]
         ms.to_csv(mean_std_dir / ('dynamic_hourly_meanstd_' + basins_filename + '.csv'))
     else:
+        mean = xr.Dataset({var:([], value) for var, value in meanstd['mean'].items()})
+        std = xr.Dataset({var:([], value) for var, value in meanstd['std'].items()})
+
+    # 将标准差中的 0 替换为一个很小的值，以避免除零错误
+    std = std.where(std != 0, other=1e-8)
+
+    dataset = (dataset - mean) / std
+    dataset.attrs['mean'] = mean
+    dataset.attrs['std'] = std
+    return dataset
+
+class MyDataset(Dataset):
+    def __init__(self) -> None:
+        super().__init__()
+    
+    def __len__(self):
+        pass
+
+    def __getitem__(self, idx: int):
         pass
 
 if __name__ == '__main__':
     basin_list = load_basin_list(settings.basin_list_dir / settings.basins_file)
-    load_xarray_dataset(settings.dataset_path, basin_list, '1990-01-01T00', '1999-01-01T12')
+    dataset = load_xarray_dataset(settings.dataset_path, basin_list, 
+                        '1990-01-01T00', '1999-01-01T12', 
+                        settings.basins_file, settings.meanstd_dir)
+    
+    print(dataset)
