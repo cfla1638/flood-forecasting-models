@@ -91,6 +91,22 @@ class HybirdModel(nn.Module):
         x = torch.concat((x.expand(-1, self.num_timestep,-1), lstm_output), dim=2)
 
         return self.pred_net(x.flatten(1))
+    
+    @staticmethod
+    def NSE(y_hat, y):
+        """计算一个batch的七天的NSE (Nash-Sutcliffe model efficiency coefficient)
+        Parameters:
+         - y_hat: (batch_size, seq_len)
+         - y: (batch_size, seq_len)
+        """
+        mask = ~torch.isnan(y)
+        y = y[mask]             # (batch_size * seq_len)
+        y_hat = y_hat[mask]     # (batch_size * seq_len)
+
+        denominator = ((y - y.mean())**2).sum()
+        numerator = ((y_hat - y)**2).sum()
+        value = 1 - (numerator / denominator)
+        return float(value)
 
 if __name__ == '__main__':
     model = HybirdModel(dynamic_input_dim=11, num_timestep=8, lead_time=6)

@@ -1,5 +1,5 @@
 from model import HybirdModel
-from data import DataInterface
+from hourly_data import DataInterface
 from rich.progress import track
 from pathlib import Path
 from args import Args
@@ -20,12 +20,13 @@ class TrainInterface(object):
         self.opts = opts
 
     @staticmethod
-    def _train_epoch(model: torch.nn.Module, train_loader: torch.utils.data.DataLoader, optimizer: torch.optim.Optimizer, epoch: int, device: str):
+    def _train_epoch(model: torch.nn.Module, train_loader: torch.utils.data.DataLoader, optimizer: torch.optim.Optimizer, criterion, epoch: int, device: str):
         """进行一个epoch的训练, 打印本轮训练的平均损失
         Parameters:
          - model: 要训练的模型
          - train_loader: 加载训练数据, Dataloader的子类
          - optimizer: 优化器
+         - criterion: 损失函数
          - epoch: 当前在进行的epoch的编号
          - device: 训练设备, 例如'cpu', 'cuda:0'
         """
@@ -41,7 +42,7 @@ class TrainInterface(object):
             y = batch['y'].to(device)
 
             y_hat = model(x)
-            loss = model.calculate_loss(y_hat, y)
+            loss = criterion(y_hat, y)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0) # 梯度裁剪
             optimizer.step()
@@ -67,18 +68,11 @@ class TrainInterface(object):
         with torch.no_grad():
             for batch in val_loader:
                 # 在加载数据时将数据转移到Device上
-                x_h = batch['x_h'].to(device)
-                x_f = batch['x_f'].to(device)
-                x_s = batch['x_s'].to(device)
+                x = batch['x'].to(device)
                 y = batch['y'].to(device)
 
-                # 将数据转化为(seq_len, batch_size, dim)的格式
-                x_h = x_h.transpose(0, 1)
-                x_f = x_f.transpose(0, 1)
-
-                y_hat = model(x_s, x_h, x_f)
-                y_hat = MyModel.predict(y_hat)
-                avg_NSE += MyModel.NSE(y_hat, y)
+                y_hat = model(x)
+                avg_NSE += HybirdModel.NSE(y_hat, y)
                 num_batch += 1
         logger.info(f'Average NSE: {avg_NSE / num_batch: .4f}')
 
@@ -104,12 +98,10 @@ class TrainInterface(object):
             os.mkdir(opts.checkpoints_dir)
         
         data_interface = DataInterface()
-        train_loader = data_interface.get_data_loader(opts.train_start_date, opts.train_end_date, opts.batch_size)
-        val_loader = data_interface.get_data_loader(opts.val_start_date, opts.val_end_date, opts.batch_size)
+        train_loader = data_interface.get_data_loader(opts.train_start_time, opts.train_end_time, opts.batch_size)
+        val_loader = data_interface.get_data_loader(opts.val_start_time, opts.val_end_time, opts.batch_size)
 
-        model = MyModel(dynamic_input_dim=7,
-                static_input_dim=27,
-                hidden_dim=256)
+        model = HybirdModel(dynamic_input_dim=11, num_timestep=8, lead_time=6)
 
         # 检查是否要加载预训练的模型
         if opts.pretrain is not None:
@@ -121,10 +113,11 @@ class TrainInterface(object):
             device = 'cpu'
         
         optimizer = torch.optim.Adam(model.parameters())
+        Loss = torch.nn.MSELoss()
         logger.info('Train on ' + device)
         logger.info('Start training.')
         for epoch in range(opts.start_epoch, opts.epoch + 1):
-            self._train_epoch(model, train_loader, optimizer, epoch, device)
+            self._train_epoch(model, train_loader, optimizer, Loss, epoch, device)
 
             # 检查是否需要验证
             if opts.val_freq is not None and epoch % opts.val_freq == 0:
@@ -140,5 +133,5 @@ if __name__ == '__main__':
     train_interface = TrainInterface(args.get_opts())
     train_interface.main()
 
-# python train.py --batch_size=256 --train_start_date=1999-10-01 --train_end_date=2009-09-30 --epoch=50 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --val_start_date=1996-10-01 --val_end_date=1999-09-30
+# python train.py --batch_size=256 --train_start_time=1999-10-01T00 --train_end_time=2004-10-01T00 --epoch=50 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --val_start_time=1996-10-01T00 --val_end_time=1999-10-01T00
 # python train.py --batch_size=256 --train_start_date=1999-10-01 --train_end_date=2002-09-30 --epoch=20 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --pretrain=./checkpoints/epoch10.tar --val_start_date=1995-10-01 --val_end_date=1997-09-30 --start_epoch=11
