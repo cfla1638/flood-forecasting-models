@@ -93,6 +93,6 @@ class HybirdModel(nn.Module):
         return self.pred_net(x.flatten(1))
 
 if __name__ == '__main__':
-    model = HybirdModel(17, 8, 6)
-    x = torch.randn(32, 8, 17)
+    model = HybirdModel(dynamic_input_dim=11, num_timestep=8, lead_time=6)
+    x = torch.randn(32, 8, 11)
     print(model(x).shape)

@@ -27,15 +27,13 @@ def load_basin_list(file_path: Path) -> List[str]:
         return [basin.strip() for basin in f.readlines()]
 
 def load_xarray_dataset(dataset_path: Path, basins: List[str], 
-                        start_time: str, end_time :str, basins_filename: str,
+                        basins_filename: str,
                         mean_std_dir: Path,
                         meanstd: pd.DataFrame = None) -> xr.Dataset:
     """
     Parameters:
      - dataset_path: netCDF文件的路径
      - basins: 流域编号的列表
-     - start_time: 开始时间(例如: '1989-06-04T04')
-     - end_time: 结束时间
      - basins_filename: 本次所用basin_list的文件名, 用于命名保存的meanstd文件
      - mean_std_dir: 存储meanstd文件的文件夹
      - meanstd: 存储数据的均值和方差, 用于对数据进行normalization, 
@@ -48,7 +46,7 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
     
     # 取给定basin和时间段的数据
     basins = [basin for basin in basins if basin in dataset.coords['basin']]    # 只保留数据集中存在的数据
-    dataset = dataset.sel(basin=basins, date=slice(start_time, end_time))
+    dataset = dataset.sel(basin=basins)
 
     # 处理缺失值
     dataset = dataset.fillna(dataset.mean())
@@ -78,19 +76,89 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
     return dataset
 
 class MyDataset(Dataset):
-    def __init__(self) -> None:
+    def __init__(self, 
+                 dynamic_ds: xr.Dataset,        # forcing data
+                 start_time: np.datetime64,     
+                 end_time: np.datetime64,
+                 forcing_attrs: List,           # 用于训练的属性列表
+                 target_vars: List,             # 目标变量的列表
+                 num_timestep: int = 8,
+                 lead_time: int = 6
+                 ):
         super().__init__()
+        start_time = np.datetime64(start_time)
+        end_time = np.datetime64(end_time)
+
+        self.dynamic_ds = dynamic_ds
+        self.start_time = start_time
+        self.end_time = end_time
+        self.num_timestep = num_timestep
+        self.lead_time = lead_time
+        self.forcing_attrs = forcing_attrs
+        self.target_vars = target_vars
+
+        self.num_basins = dynamic_ds.dims['basin']  # basin的数目
+        num_hours = (end_time - start_time).astype(np.int32)    # 给定时间段共有多少小时
+        self.slide_wnd = num_timestep + lead_time   # 滑动窗口长度
+        self.num_samples_per_basin = (num_hours - self.slide_wnd + 1)   # 给定时间段共可以生成多少样本(滑动窗口滑动次数)
+
     
     def __len__(self):
-        pass
+        return self.num_basins * self.num_samples_per_basin
 
     def __getitem__(self, idx: int):
-        pass
+        # 获取流域id和时间偏移
+        sample_idx = int(idx % self.num_samples_per_basin)
+        basin_idx = int(idx / self.num_samples_per_basin)
+        basin = self.dynamic_ds.coords['basin'][basin_idx].values.item()
+
+        # 计算本样本的开始时间和结束时间
+        start_time = self.start_time + sample_idx
+        end_time = start_time + self.slide_wnd - 1
+
+        # 筛选本样本的具体数据        
+        sample = self.dynamic_ds.sel(date=slice(start_time, end_time))
+        sample = sample.isel(basin=basin_idx)
+
+        # 切分数据
+        x = sample.isel(date=slice(0, self.num_timestep))
+        y = sample.isel(date=slice(-self.lead_time, None))
+
+        x = x[self.forcing_attrs]
+        y = y[self.target_vars]
+
+        # 转换成torch.Tensor
+        x = x.to_array(dim='variable').transpose('date', 'variable')
+        x = torch.from_numpy(x.values).float()
+
+        y = y.to_array(dim='variable').transpose('date', 'variable')
+        y = torch.from_numpy(y.values.squeeze()).float()
+
+        return {'x': x, 'y': y}
+    
+class DataInterface(object):
+    def __init__(self) -> None:
+        # 加载标准化数据的均值方差
+        dynamic_meanstd = None
+        if settings.dynamic_mean_std is not None:
+            dynamic_meanstd = pd.read_csv(settings.mean_std_dir / settings.dynamic_mean_std, index_col=0)
+
+        # 加载数据
+        basin_list = load_basin_list(settings.basin_list_dir / settings.basins_file)
+        self.dataset = load_xarray_dataset(settings.dataset_path, basin_list, 
+                                           settings.basins_file, settings.meanstd_dir, dynamic_meanstd)
+
+    def get_data_loader(self, start_time: str, end_time: str, batch_size: int = 256,
+                        num_timestep: int = 8, lead_time: int = 6):
+        dataset = MyDataset(self.dataset, start_time, end_time,
+                            settings.forcing_attrs, settings.target_var, num_timestep, lead_time)
+        return DataLoader(dataset, batch_size, shuffle=True)
+
 
 if __name__ == '__main__':
-    basin_list = load_basin_list(settings.basin_list_dir / settings.basins_file)
-    dataset = load_xarray_dataset(settings.dataset_path, basin_list, 
-                        '1990-01-01T00', '1999-01-01T12', 
-                        settings.basins_file, settings.meanstd_dir)
-    
-    print(dataset)
+    datahub = DataInterface()
+    loader = datahub.get_data_loader('1990-01-01T00', '1995-01-01T00')
+    for batch in loader:
+        print(batch['x'].shape)
+        print(batch['y'].shape)
+        input()

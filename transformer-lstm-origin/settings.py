@@ -6,6 +6,8 @@ dataset_path = Path('../data/CAMELS_US/hourly/usgs-streamflow-nldas_hourly.nc') 
 
 meanstd_dir = Path('../data/meanstd/transformer-lstm-origin/')
 
+dynamic_mean_std = None
+
 example_basin = '01013500'  # 供测试使用的流域编号
 
 # 存储DataInterface加载的流域标号
@@ -24,6 +26,6 @@ forcing_attrs = ['convective_fraction',
                   'wind_u',
                   'wind_v',
                   ]
-target_attr = 'qobs_mm_per_hour'    # 目标变量
+target_var = ['qobs_mm_per_hour']    # 目标变量
 
 device = 'cuda:0'
