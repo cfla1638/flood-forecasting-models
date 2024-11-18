@@ -10,10 +10,11 @@ import sys
 import torch
 import settings
 
-# 设置logger
-logger.remove()
-logger.add(sys.stdout, level="INFO")
-logger.add("./log/log{time}.log", level="INFO", rotation="20 MB")
+def setup_logger():
+    # 设置logger
+    logger.remove()
+    logger.add(sys.stdout, level="INFO")
+    logger.add("./log/log{time}.log", level="INFO", rotation="20 MB")
 
 class TrainInterface(object):
     def __init__(self, opts) -> None:
@@ -143,6 +144,7 @@ class TrainInterface(object):
 if __name__ == '__main__':
     args = Args()
     args.set_train_args()
+    setup_logger()
     train_interface = TrainInterface(args.get_opts())
     train_interface.main()
 

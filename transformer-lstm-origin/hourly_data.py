@@ -149,10 +149,10 @@ class DataInterface(object):
                                            settings.basins_file, settings.meanstd_dir, dynamic_meanstd)
 
     def get_data_loader(self, start_time: str, end_time: str, batch_size: int = 256,
-                        num_timestep: int = 8, lead_time: int = 6):
+                        num_timestep: int = 8, lead_time: int = 6, num_workers: int = 8):
         dataset = MyDataset(self.dataset, start_time, end_time,
                             settings.forcing_attrs, settings.target_var, num_timestep, lead_time)
-        return DataLoader(dataset, batch_size, shuffle=True)
+        return DataLoader(dataset, batch_size, shuffle=True, num_workers=num_workers)
 
 
 if __name__ == '__main__':

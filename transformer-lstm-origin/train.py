@@ -10,10 +10,11 @@ import sys
 import torch
 import settings
 
-# 设置logger
-logger.remove()
-logger.add(sys.stdout, level="INFO")
-logger.add("./log/log{time}.log", level="INFO", rotation="20 MB")
+def setup_logger():
+    # 设置logger
+    logger.remove()
+    logger.add(sys.stdout, level="INFO")
+    logger.add("./log/log{time}.log", level="INFO", rotation="20 MB")
 
 class TrainInterface(object):
     def __init__(self, opts) -> None:
@@ -66,7 +67,7 @@ class TrainInterface(object):
         num_batch = 0.0
         avg_NSE = 0.0
         with torch.no_grad():
-            for batch in val_loader:
+            for batch in track(val_loader, description=f'validating'):
                 # 在加载数据时将数据转移到Device上
                 x = batch['x'].to(device)
                 y = batch['y'].to(device)
@@ -101,7 +102,7 @@ class TrainInterface(object):
         train_loader = data_interface.get_data_loader(opts.train_start_time, opts.train_end_time, opts.batch_size)
         val_loader = data_interface.get_data_loader(opts.val_start_time, opts.val_end_time, opts.batch_size)
 
-        model = HybirdModel(dynamic_input_dim=11, num_timestep=8, lead_time=6)
+        model = HybirdModel(dynamic_input_dim=12, num_timestep=8, lead_time=6)
 
         # 检查是否要加载预训练的模型
         if opts.pretrain is not None:
@@ -130,8 +131,11 @@ class TrainInterface(object):
 if __name__ == '__main__':
     args = Args()
     args.set_train_args()
+    setup_logger()
     train_interface = TrainInterface(args.get_opts())
     train_interface.main()
 
-# python train.py --batch_size=256 --train_start_time=1999-10-01T00 --train_end_time=2004-10-01T00 --epoch=50 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --val_start_time=1996-10-01T00 --val_end_time=1999-10-01T00
+# python train.py --batch_size=256 --train_start_time=1999-10-01T00 --train_end_time=2004-10-01T00 --epoch=50 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --val_start_time=1996-10-01T00 --val_end_time=1998-10-01T00
 # python train.py --batch_size=256 --train_start_date=1999-10-01 --train_end_date=2002-09-30 --epoch=20 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --pretrain=./checkpoints/epoch10.tar --val_start_date=1995-10-01 --val_end_date=1997-09-30 --start_epoch=11
+
+# scp -rP 54212 ./data/CAMELS_US/hourly/ root@connect.yza1.seetacloud.com:/root/autodl-tmp

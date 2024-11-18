@@ -25,6 +25,7 @@ forcing_attrs = ['convective_fraction',
                   'total_precipitation',
                   'wind_u',
                   'wind_v',
+                  'qobs_mm_per_hour'
                   ]
 target_var = ['qobs_mm_per_hour']    # 目标变量
 

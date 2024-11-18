@@ -291,9 +291,9 @@ class DataInterface(object):
         self.attrs = load_camels_us_attributes(settings.dataset_dir, self.basins)
         self.static_ds = load_static_attributes(self.attrs, settings.attribute_list, static_meanstd)
 
-    def get_data_loader(self, start_date: str, end_date: str, batch_size: int = 256):
+    def get_data_loader(self, start_date: str, end_date: str, batch_size: int = 256, num_workers: int = 8):
         dataset = MyDataset(self.dynamic_ds, self.static_ds, start_date, end_date)
-        return DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        return DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
 
 if __name__ == '__main__':
