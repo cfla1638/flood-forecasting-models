@@ -1,5 +1,5 @@
 from model import MyModel
-from data import DataInterface
+from hourly_data import DataInterface
 from rich.progress import track
 
 import torch

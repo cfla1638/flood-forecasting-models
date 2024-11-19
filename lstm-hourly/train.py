@@ -1,5 +1,5 @@
 from model import MyModel
-from data import DataInterface
+from hourly_data import DataInterface
 from rich.progress import track
 from pathlib import Path
 from args import Args
@@ -110,11 +110,11 @@ class TrainInterface(object):
         if not os.path.exists(opts.checkpoints_dir):
             os.mkdir(opts.checkpoints_dir)
         
-        data_interface = DataInterface()
-        train_loader = data_interface.get_data_loader(opts.train_start_date, opts.train_end_date, opts.batch_size)
-        val_loader = data_interface.get_data_loader(opts.val_start_date, opts.val_end_date, opts.batch_size)
+        datahub = DataInterface()
+        train_loader = datahub.get_data_loader(opts.train_start_time, opts.train_end_time, opts.batch_size)
+        val_loader = datahub.get_data_loader(opts.val_start_time, opts.val_end_time, opts.batch_size)
 
-        model = MyModel(dynamic_input_dim=7,
+        model = MyModel(dynamic_input_dim=12,
                 static_input_dim=27,
                 hidden_dim=256)
 
@@ -148,5 +148,5 @@ if __name__ == '__main__':
     train_interface = TrainInterface(args.get_opts())
     train_interface.main()
 
-# python train.py --batch_size=256 --train_start_date=1999-10-01 --train_end_date=2009-09-30 --epoch=50 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --val_start_date=1996-10-01 --val_end_date=1999-09-30
+# python train.py --batch_size=256 --train_start_time=1999-10-01T00 --train_end_time=2004-10-01T00 --epoch=50 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --val_start_time=1996-10-01T00 --val_end_time=1998-10-01T00
 # python train.py --batch_size=256 --train_start_date=1999-10-01 --train_end_date=2002-09-30 --epoch=20 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --pretrain=./checkpoints/epoch10.tar --val_start_date=1995-10-01 --val_end_date=1997-09-30 --start_epoch=11

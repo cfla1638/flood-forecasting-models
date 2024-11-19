@@ -183,6 +183,14 @@ def load_xarray_dataset(data_dir: Path, basins: List[str], meanstd: pd.DataFrame
     return dataset
 
 def load_static_attributes(df: pd.DataFrame, attrs: List[str], meanstd: pd.DataFrame = None):
+    """加载basin静态属性
+    Parameters:
+     - df: 以basin编号为index的静态属性Dataframe
+     - attrs: 静态属性名的列表
+     - meanstd: 以静态属性名为index, 有mean和std两列的Dataframe, 用于normalization
+    Return:
+     - {basin : torch.Tensor}: 以basin编号为键, 以对应的静态属性tensor为值得列表
+    """
     df = df[attrs]      # 取出指定的属性列
     df = df.fillna(df.mean())   # 填充缺失值
 

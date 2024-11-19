@@ -4,7 +4,7 @@ basin_list_dir = Path('../data/basin_list/')     # 流域编号列表目录
 
 dataset_path = Path('../data/CAMELS_US/hourly/usgs-streamflow-nldas_hourly.nc')      # 数据集路径
 
-meanstd_dir = Path('../data/meanstd/transformer-lstm-origin/')
+meanstd_dir = Path('../data/meanstd/hourly/')
 
 dynamic_mean_std = None
 
