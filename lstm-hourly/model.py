@@ -1,3 +1,6 @@
+# This file includes code from the NeuralHydrology project, licensed under the BSD 3-Clause License.
+# Copyright (c) 2021, NeuralHydrology. See the LICENSE file for details.
+
 import numpy as np
 import torch
 import torch.nn as nn

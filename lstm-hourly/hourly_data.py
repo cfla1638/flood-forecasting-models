@@ -1,3 +1,6 @@
+# This file includes code from the NeuralHydrology project, licensed under the BSD 3-Clause License.
+# Copyright (c) 2021, NeuralHydrology. See the LICENSE file for details.
+
 # 数据处理
 # 数据 coordinates:
 # date: 1979-01-01T13 - 2019-03-14T12
