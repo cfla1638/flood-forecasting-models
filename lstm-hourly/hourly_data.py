@@ -14,8 +14,8 @@ import settings
 
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
-from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
+from loguru import logger
 
 # --- 处理静态数据 ---
 
@@ -28,9 +28,11 @@ def load_camels_us_attributes(data_dir: Path, basins: List[str] = []) -> pd.Data
     Return:
      - pd.DataFrame: index为gauge_id
     """
+    logger.info(f"Loading static attributes...")
     attributes_path = data_dir / 'camels_attributes_v2.0'
 
     if not attributes_path.exists():
+        logger.error(f"Attribute folder not found at {attributes_path}")
         raise RuntimeError(f"Attribute folder not found at {attributes_path}")
 
     txt_files = attributes_path.glob('camels_*.txt')
@@ -50,8 +52,14 @@ def load_camels_us_attributes(data_dir: Path, basins: List[str] = []) -> pd.Data
     # 根据传入的流域编号列表筛选数据
     if basins:
         if any(b not in df.index for b in basins):
+            logger.error('Some basins are missing static attributes.')
             raise ValueError('Some basins are missing static attributes.')
         df = df.loc[basins]
+        logger.info(f"Static attributes loaded for {len(basins)} basins.")
+    else:
+        logger.info('Static attributes loaded for all basins.')
+
+    logger.info(f"Static attributes loaded.")
 
     return df
 
@@ -67,6 +75,7 @@ def load_static_attributes(df: pd.DataFrame, attrs: List[str], basin_filename: s
     Return:
      - {basin : torch.Tensor}: 以basin编号为键, 以对应的静态属性tensor为值得列表
     """
+    logger.info('Processing static attributes...')
     df = df[attrs]      # 取出指定的属性列
     df = df.fillna(df.mean())   # 填充缺失值
 
@@ -76,10 +85,12 @@ def load_static_attributes(df: pd.DataFrame, attrs: List[str], basin_filename: s
         std = df.std().rename('std')
         ms = pd.concat([mean, std], axis=1)
         basin_filename = basin_filename.split('.')[0]
-        ms.to_csv(meanstd_dir / ('static_meanstd_' + basin_filename + '.csv'))
+        ms.to_csv(meanstd_dir / ('static_' + basin_filename + '.csv'))
+        logger.info(f'Static mean and std saved to {meanstd_dir / ("static_" + basin_filename + ".csv")}')
     else:
         mean = meanstd['mean']
         std = meanstd['std']
+        logger.info('Using provided mean and std for normalization')
 
     # 如果只有一行数据，std 会全部为 0，我们可以直接将 std 设置为 1 来避免除零
     if len(df) == 1:
@@ -88,6 +99,8 @@ def load_static_attributes(df: pd.DataFrame, attrs: List[str], basin_filename: s
         std = std.replace(0, 1e-8)
 
     df = (df - mean) / std  # normalization
+
+    logger.info('Static attributes processed.')
 
     return {index : torch.from_numpy(row.values.flatten().astype(np.float32)) for index, row in df.iterrows()}
 
@@ -122,11 +135,16 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
     Return:
      - xarray.Dataset: 数据集
     """
+    logger.info('Loading dynamic data...')
     dataset = xr.open_dataset(dataset_path)
+    logger.info('Dynamic data loaded.')
     
     # 取给定basin的数据
     basins = [basin for basin in basins if basin in dataset.coords['basin']]    # 只保留数据集中存在的数据
     dataset = dataset.sel(basin=basins)
+    logger.info(f'Loaded dynamic data for {len(basins)} basins.')
+
+    logger.info('processing dynamic data...')
 
     # 处理缺失值
     dataset = dataset.fillna(dataset.mean())
@@ -142,10 +160,12 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
         s = std.to_pandas().rename('std')
         ms = pd.concat([m, s], axis=1)
         basins_filename = basins_filename.split('.')[0]
-        ms.to_csv(mean_std_dir / ('dynamic_hourly_meanstd_' + basins_filename + '.csv'))
+        ms.to_csv(mean_std_dir / ('dynamic_' + basins_filename + '.csv'))
+        logger.info(f'Dynamic mean and std saved to {mean_std_dir / ("dynamic_" + basins_filename + ".csv")}')
     else:
         mean = xr.Dataset({var:([], value) for var, value in meanstd['mean'].items()})
         std = xr.Dataset({var:([], value) for var, value in meanstd['std'].items()})
+        logger.info('Using provided mean and std for normalization')
 
     # 将标准差中的 0 替换为一个很小的值，以避免除零错误
     std = std.where(std != 0, other=1e-8)
@@ -153,6 +173,9 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
     dataset = (dataset - mean) / std
     dataset.attrs['mean'] = mean
     dataset.attrs['std'] = std
+
+    logger.info('Dynamic data processed.')
+
     return dataset
 
 class MyDataset(Dataset):
@@ -248,6 +271,8 @@ class DataInterface(object):
 
 
 if __name__ == '__main__':
+    logger.remove() # 禁用日志
+
     datahub = DataInterface()
     loader = datahub.get_data_loader('1990-01-01T00', '1995-01-01T00', num_workers=1)
     for batch in loader:

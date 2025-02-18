@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, List, Tuple, Union
+from torchinfo import summary
 
 class CMAL(nn.Module):
     """Countable Mixture of Asymmetric Laplacians(CMAL)
@@ -203,4 +204,7 @@ class MyModel(nn.Module):
         return float(value)
 
 if __name__ == '__main__':
-    pass
+    model = MyModel(dynamic_input_dim=12,
+                static_input_dim=27,
+                hidden_dim=256)
+    summary(model, input_size=[(64, 27), (336, 64, 12), (6, 64, 12)])

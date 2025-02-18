@@ -1,6 +1,6 @@
 from pathlib import Path
 
-basin_list_dir = Path('../data/basin_list/')     # 流域编号列表目录
+basin_list_dir = Path('../data/basin_list/train_val_test/')     # 流域编号列表目录
 
 dataset_dir = Path('../data/CAMELS_US')      # 数据集路径
 
@@ -14,7 +14,7 @@ static_mean_std = None    # 用于标准化静态数据的均值方差, 可以�
 
 
 # 存储DataInterface加载的流域标号
-basins_file = '10_basin_list.txt'
+basins_file = 'Region_03_train.txt'
 
 # 使用静态属性的列表
 attribute_list = ['p_mean',
@@ -57,8 +57,7 @@ forcing_attrs = ['convective_fraction',
                   'temperature',
                   'total_precipitation',
                   'wind_u',
-                  'wind_v',
-                  'qobs_mm_per_hour'
+                  'wind_v'
                   ]
 target_var = ['qobs_mm_per_hour']    # 目标变量
 

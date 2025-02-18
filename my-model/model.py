@@ -3,9 +3,34 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, List, Tuple, Union
-from torchinfo import summary
 
-class HybirdModel(nn.Module):
+class EncoderBlock(nn.Module):
+    def __init__(self, dim: int, num_head: int, dropout: float = 0.1) -> None:
+        """
+        Parameters:
+         - dim: 输入的维度
+         - num_head: 多头自注意力的头数
+         - dropout: dropout的概率
+        """
+        super().__init__()
+        self.multi_head_attention = nn.MultiheadAttention(dim, num_head, batch_first=True, dropout=dropout)
+        self.layer_norm1 = nn.LayerNorm(dim)
+        self.conv = nn.Conv1d(dim, dim, 3, padding='same')     # 一维卷积
+        self.layer_norm2 = nn.LayerNorm(dim)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Parameter:
+         - x: (batch_size, seq_len, input_dim)
+        Return: (batch_size, seq_len, input_dim)
+        """
+        attn_output, _ = self.multi_head_attention(x, x, x) # (batch_size, seq_len, input_dim)
+        x = self.layer_norm1(x + self.dropout(attn_output)) # (batch_size, seq_len, input_dim)
+        conv1d_output = self.conv(x.transpose(-1, -2)).transpose(-1, -2)
+        return self.layer_norm2(x + self.dropout(conv1d_output))
+
+class MyModel(nn.Module):
     def __init__(self, dynamic_input_dim: int, num_timestep: int, lead_time: int, dropout=0.1) -> None:
         super().__init__()
         self.dynamic_embd_dim = 32          # 输入序列数据的维度
@@ -111,7 +136,6 @@ class HybirdModel(nn.Module):
         return float(value)
 
 if __name__ == '__main__':
-    model = HybirdModel(dynamic_input_dim=11, num_timestep=8, lead_time=6)
-    x = torch.randn(32, 8, 11)
-    # print(model(x).shape)
-    summary(model, input_size=(4096, 8, 11))
+    x = torch.randn(32, 8, 24)
+    model = EncoderBlock(24, 8)
+    print(model(x).shape)
