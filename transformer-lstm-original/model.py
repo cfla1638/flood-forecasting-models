@@ -75,10 +75,11 @@ class HybirdModel(nn.Module):
         """
         x = self.dynamic_embd_net(x)    # (batch_size, seq_len, embd_dim)
         lstm_output, _ = self.lstm(x)             # (batch_size, seq_len, lstm_embd_dim)
-        x, _ = self.self_attention(lstm_output, lstm_output, lstm_output)    # (batch_size, seq_len, lstm_embd_dim)
-        x = self.layer_norm1(x + self.dropout(x))
-        x = self.weight_layer_1(x)
-        x = self.weight_layer_2(x + self.dropout(x))
+        attn_output, _ = self.self_attention(lstm_output, lstm_output, lstm_output)    # (batch_size, seq_len, lstm_embd_dim)
+        x = self.layer_norm1(lstm_output + self.dropout(attn_output))
+        wl_output = self.weight_layer_1(x)
+        x = self.layer_norm2(x + self.dropout(wl_output))
+        x = self.weight_layer_2(x)
         # (batch_size, seq_len, lstm_embd_dim)
 
         x = self.conv(x.transpose(1, 2))    # (batch_size, dim, seq_len)

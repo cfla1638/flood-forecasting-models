@@ -109,7 +109,7 @@ class MyDataset(Dataset):
     def __getitem__(self, idx: int):
         # 获取流域id和时间偏移
         sample_idx = int(idx % self.num_samples_per_basin)
-        basin_idx = int(idx / self.num_samples_per_basin)
+        basin_idx = int(idx // self.num_samples_per_basin)
         basin = self.dynamic_ds.coords['basin'][basin_idx].values.item()
 
         # 计算本样本的开始时间和结束时间

@@ -22,8 +22,8 @@ from torch.utils.data import Dataset, DataLoader
 def load_camels_us_attributes(data_dir: Path, basins: List[str] = []) -> pd.DataFrame:
     """读取流域的静态属性
     Parameters:
-     - data_dir: CAMELS_US的路径
-     - basins: 要加载的流域编号列表，默认返回所有的流域
+     - data_dir: 文件夹 "CAMELS_US" 的路径
+     - basins: 要加载的流域编号列表, 如果未传入该参数, 默认返回所有的流域
 
     Return:
      - pd.DataFrame: index为gauge_id
@@ -47,6 +47,7 @@ def load_camels_us_attributes(data_dir: Path, basins: List[str] = []) -> pd.Data
     df['huc'] = df['huc_02'].apply(lambda x: str(x).zfill(2))
     df = df.drop('huc_02', axis=1)
 
+    # 根据传入的流域编号列表筛选数据
     if basins:
         if any(b not in df.index for b in basins):
             raise ValueError('Some basins are missing static attributes.')
@@ -60,8 +61,8 @@ def load_static_attributes(df: pd.DataFrame, attrs: List[str], basin_filename: s
     Parameters:
      - df: 以basin编号为index的静态属性Dataframe
      - attrs: 静态属性名的列表
-     - basin_filename: 使用的, 存储basin list的文件名, 例如'10_basin_list.txt', 用于命名均值方差文件
-     - meanstd_dir: 存储方差文件的文件夹路径
+     - basin_filename: 该参数为存储basin list的文件名的字符串, 例如'10_basin_list.txt', 用于命名均值方差文件
+     - meanstd_dir: 存储均值方差文件的文件夹路径
      - meanstd: 以静态属性名为index, 有mean和std两列的Dataframe, 用于normalization
     Return:
      - {basin : torch.Tensor}: 以basin编号为键, 以对应的静态属性tensor为值得列表
@@ -109,9 +110,9 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
                         basins_filename: str,
                         mean_std_dir: Path,
                         meanstd: pd.DataFrame = None) -> xr.Dataset:
-    """
+    """从netCDF文件中加载小时尺度的动态数据, 返回xarray.Dataset
     Parameters:
-     - dataset_path: netCDF文件的路径
+     - dataset_path: netCDF文件的路径, 包括文件名, 例如 Path('../data/CAMELS_US/hourly/usgs-streamflow-nldas_hourly.nc')
      - basins: 流域编号的列表
      - basins_filename: 本次所用basin_list的文件名, 用于命名保存的meanstd文件
      - mean_std_dir: 存储meanstd文件的文件夹
@@ -123,7 +124,7 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
     """
     dataset = xr.open_dataset(dataset_path)
     
-    # 取给定basin和时间段的数据
+    # 取给定basin的数据
     basins = [basin for basin in basins if basin in dataset.coords['basin']]    # 只保留数据集中存在的数据
     dataset = dataset.sel(basin=basins)
 
@@ -156,14 +157,14 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
 
 class MyDataset(Dataset):
     def __init__(self, 
-                 dynamic_ds: xr.Dataset,        # forcing data
-                 static_ds: Dict[str, torch.Tensor],    # static data
-                 start_time: np.datetime64,     
-                 end_time: np.datetime64,
+                 dynamic_ds: xr.Dataset,                # 动态数据
+                 static_ds: Dict[str, torch.Tensor],    # 静态数据(catchment attributes)
+                 start_time: np.datetime64,     # 数据的开始时间   
+                 end_time: np.datetime64,       # 数据的结束时间
                  forcing_attrs: List,           # 用于训练的属性列表
                  target_vars: List,             # 目标变量的列表
-                 hindcast_length: int = 336,    # 336h = 14d
-                 forecast_horizon: int = 6
+                 hindcast_length: int = 336,    # 336h = 14d, 后顾时间的长度
+                 forecast_horizon: int = 6      # 6h, 预测提前时间的长度 (forecast lead time)
                  ):
         super().__init__()
         start_time = np.datetime64(start_time)
@@ -190,7 +191,7 @@ class MyDataset(Dataset):
     def __getitem__(self, idx: int):
         # 获取流域id和时间偏移
         sample_idx = int(idx % self.num_samples_per_basin)
-        basin_idx = int(idx / self.num_samples_per_basin)
+        basin_idx = int(idx // self.num_samples_per_basin)
         basin = self.dynamic_ds.coords['basin'][basin_idx].values.item()
 
         # 计算本样本的开始时间和结束时间
