@@ -1,6 +1,6 @@
 from model import HybirdModel
 from hourly_data import DataInterface
-from rich.progress import track
+from tqdm import tqdm
 from pathlib import Path
 from args import Args
 from loguru import logger
@@ -13,7 +13,7 @@ import settings
 def setup_logger():
     # 设置logger
     logger.remove()
-    logger.add(sys.stdout, level="INFO")
+    logger.add(sys.stdout, level="INFO", format="{message}")
     logger.add("./log/log{time}.log", level="INFO", rotation="20 MB")
 
 class TrainInterface(object):
@@ -37,7 +37,7 @@ class TrainInterface(object):
 
         num_batch = 0.0
         losssum = 0.0
-        for batch in track(train_loader, description=f'epoch {epoch}'):
+        for batch in tqdm(train_loader, desc=f'epoch {epoch}'):
             # 在加载数据时将数据转移到Device上
             x = batch['x'].to(device)
             y = batch['y'].to(device)
@@ -62,20 +62,27 @@ class TrainInterface(object):
          - val_loader: 加载训练数据, Dataloader的子类
          - device: 训练设备, 例如'cpu', 'cuda:0'
         """
+        logger.info('Start validating.')
         model.eval()
 
         num_batch = 0.0
         avg_NSE = 0.0
+        avg_RMSE = 0.0
+        avg_MAE = 0.0
+        avg_Bias = 0.0
         with torch.no_grad():
-            for batch in track(val_loader, description=f'validating'):
+            for batch in tqdm(val_loader, desc=f'validating'):
                 # 在加载数据时将数据转移到Device上
                 x = batch['x'].to(device)
                 y = batch['y'].to(device)
 
                 y_hat = model(x)
                 avg_NSE += HybirdModel.NSE(y_hat, y)
+                avg_RMSE += HybirdModel.RMSE(y_hat, y)
+                avg_MAE += HybirdModel.MAE(y_hat, y)
+                avg_Bias += HybirdModel.Bias(y_hat, y)
                 num_batch += 1
-        logger.info(f'Average NSE: {avg_NSE / num_batch: .4f}')
+        logger.info(f'Average NSE: {avg_NSE / num_batch: .4f} | Average RMSE: {avg_RMSE / num_batch: .4f} | Average MAE: {avg_MAE / num_batch: .4f} | Average Bias: {avg_Bias / num_batch: .4f}')
 
 
     @staticmethod
@@ -90,13 +97,15 @@ class TrainInterface(object):
         model_name = f'epoch{epoch}.pth'
         save_path = save_dir / model_name
         torch.save(model.state_dict(), save_path)
-    
+        logger.info(f'Model {model_name} saved.')
+
     def main(self):
         """训练的流程
         """
         opts = self.opts
         if not os.path.exists(opts.checkpoints_dir):
             os.mkdir(opts.checkpoints_dir)
+            logger.info(f'Create checkpoints dir {opts.checkpoints_dir}')
         
         data_interface = DataInterface()
         train_loader = data_interface.get_data_loader(opts.train_start_time, opts.train_end_time, opts.batch_size)
@@ -107,7 +116,8 @@ class TrainInterface(object):
         # 检查是否要加载预训练的模型
         if opts.pretrain is not None:
             model.load_state_dict(torch.load(opts.pretrain, weights_only=True))
-        
+            logger.info(f'Load pretrain model from {opts.pretrain}')
+
         if opts.use_GPU:
             device = f'cuda:{opts.GPU_id}'
         else:

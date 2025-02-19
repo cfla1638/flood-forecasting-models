@@ -9,7 +9,7 @@ import torch
 
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
-from rich.progress import track
+from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
 
 import settings
@@ -173,7 +173,7 @@ def load_xarray_dataset(data_dir: Path, basins: List[str], meanstd: pd.DataFrame
     """
     # 加载并拼接dataset
     data_list = []
-    for basin in track(basins, description='Loading basin data'):
+    for basin in tqdm(basins, desc='Loading basin data'):
         df = load_basin_data(data_dir, basin, 'daymet')
         ds = xr.Dataset.from_dataframe(df.astype(np.float32))
         ds = ds.assign_coords({'basin': basin})

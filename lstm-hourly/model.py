@@ -202,6 +202,50 @@ class MyModel(nn.Module):
         numerator = ((y_hat - y)**2).sum()
         value = 1 - (numerator / denominator)
         return float(value)
+    
+    @staticmethod
+    def RMSE(y_hat, y):
+        """计算一个batch的RMSE (Root Mean Square Error)
+        Parameters:
+         - y_hat: (batch_size, seq_len)
+         - y: (batch_size, seq_len)
+        """
+        mask = ~torch.isnan(y)
+        y = y[mask]             # (batch_size * seq_len)
+        y_hat = y_hat[mask]
+
+        value = torch.sqrt(((y - y_hat)**2).mean())
+        return float(value)
+    
+    @staticmethod
+    def MAE(y_hat, y):
+        """计算一个batch的MAE (Mean Absolute Error)
+        Parameters:
+         - y_hat: (batch_size, seq_len)
+         - y: (batch_size, seq_len)
+        """
+        mask = ~torch.isnan(y)
+        y = y[mask]             # (batch_size * seq_len)
+        y_hat = y_hat[mask]
+
+        value = (y - y_hat).abs().mean()
+        return float(value)
+    
+    @staticmethod
+    def Bias(y_hat, y):
+        """计算一个batch的Bias (Mean Bias Error)
+        Parameters:
+         - y_hat: (batch_size, seq_len)
+         - y: (batch_size, seq_len)
+        """
+        mask = ~torch.isnan(y)
+        y = y[mask]             # (batch_size * seq_len)
+        y_hat = y_hat[mask]
+
+        denominator = y.sum()
+        numerator = (y_hat - y).sum()
+        value = numerator / denominator
+        return float(value)
 
 if __name__ == '__main__':
     model = MyModel(dynamic_input_dim=12,

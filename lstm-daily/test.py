@@ -1,6 +1,6 @@
 from model import MyModel
 from daily_data import DataInterface
-from rich.progress import track
+from tqdm import tqdm
 
 import torch
 
@@ -19,7 +19,7 @@ if __name__ == '__main__':
     with torch.no_grad():
         num_batch = 0.0
         avg_NSE = 0.0
-        for batch in track(loader, description='Testing'):
+        for batch in tqdm(loader, desc='Testing'):
             x_h = batch['x_h'].to(device)
             x_f = batch['x_f'].to(device)
             x_s = batch['x_s'].to(device)

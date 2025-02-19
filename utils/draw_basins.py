@@ -4,12 +4,28 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import contextily as ctx
 
-dataset_path = Path('../data/CAMELS_US/')      # 数据集路径
+def load_basin_list(file_path: Path):
+    """读取流域列表
+    Parameter:
+     - file_path: 文件路径
+    Return:
+     - 流域编号的列表
+    """
+    if not file_path.is_file():
+        raise FileNotFoundError(f'{file_path} not found')
+    with open(file_path, 'r') as f:
+        return [basin.strip() for basin in f.readlines()]
 
+dataset_path = Path('../data/CAMELS_US/')      # 数据集路径
+basin_list_path = '../data/basin_list/train_val_test/Region_03_train.txt'  # 流域列表路径
 basin_metadata = pd.read_csv(dataset_path / 'basin_metadata/gauge_information.txt', index_col='GAGE_ID', sep='\t', engine='python', dtype={'GAGE_ID': str, 'HUC_02': str})
 
 # 筛选 HUC_02
 # basin_metadata = basin_metadata[basin_metadata['HUC_02'] == '03']
+
+# 筛选位于流域列表中的站点
+basin_list = load_basin_list(Path(basin_list_path))
+basin_metadata = basin_metadata.loc[basin_list]
 
 # 转换为 GeoDataFrame
 gdf = gpd.GeoDataFrame(basin_metadata, geometry=gpd.points_from_xy(basin_metadata["LONG"], basin_metadata["LAT"]), crs="EPSG:4326")

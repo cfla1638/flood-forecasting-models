@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Union
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
+from loguru import logger
 
 def load_basin_list(file_path: Path) -> List[str]:
     """读取流域列表
@@ -42,11 +43,16 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
     Return:
      - xarray.Dataset: 数据集
     """
+    logger.info('Loading dynamic data...')
     dataset = xr.open_dataset(dataset_path)
-    
+    logger.info('Dynamic data loaded.')
+
     # 取给定basin和时间段的数据
     basins = [basin for basin in basins if basin in dataset.coords['basin']]    # 只保留数据集中存在的数据
     dataset = dataset.sel(basin=basins)
+    logger.info(f'Loaded dynamic data for {len(basins)} basins.')
+
+    logger.info('processing dynamic data...')
 
     # 处理缺失值
     dataset = dataset.fillna(dataset.mean())
@@ -63,9 +69,11 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
         ms = pd.concat([m, s], axis=1)
         basins_filename = basins_filename.split('.')[0]
         ms.to_csv(mean_std_dir / ('dynamic_hourly_meanstd_' + basins_filename + '.csv'))
+        logger.info(f'Dynamic mean and std saved to {mean_std_dir / ("dynamic_" + basins_filename + ".csv")}')
     else:
         mean = xr.Dataset({var:([], value) for var, value in meanstd['mean'].items()})
         std = xr.Dataset({var:([], value) for var, value in meanstd['std'].items()})
+        logger.info('Using provided mean and std for normalization')
 
     # 将标准差中的 0 替换为一个很小的值，以避免除零错误
     std = std.where(std != 0, other=1e-8)
@@ -73,6 +81,9 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
     dataset = (dataset - mean) / std
     dataset.attrs['mean'] = mean
     dataset.attrs['std'] = std
+
+    logger.info('Dynamic data processed.')
+
     return dataset
 
 class MyDataset(Dataset):
@@ -137,28 +148,77 @@ class MyDataset(Dataset):
         return {'x': x, 'y': y}
     
 class DataInterface(object):
-    def __init__(self) -> None:
+    def __init__(self, 
+                 basins_file : str = None, 
+                 default_start_time : str = None, 
+                 default_end_time : str = None, 
+                 default_numstep : int = 8, 
+                 default_lead_time : int = 6,
+                 default_batch_size : int = 256,
+                 default_num_workers : int = 8
+                 ) -> None:
+        """
+        Parameters:
+         - basins_file: 流域列表的文件名, 如果不传入该参数, 则使用settings.basins_file
+         - default_start_time: 默认的开始时间, 如果仅仅使用get_data_loader方法, 可以不传入该参数
+         - default_end_time: 默认的结束时间, 如果仅仅使用get_data_loader方法, 可以不传入该参数
+         - default_numstep: 默认的时间步长, 如果仅仅使用get_data_loader方法, 可以不传入该参数
+         - default_lead_time: 默认的预测时间步长, 如果仅仅使用get_data_loader方法, 可以不传入该参数
+         - default_batch_size: 默认的batch_size, 如果仅仅使用get_data_loader方法, 可以不传入该参数
+         - default_num_workers: 默认的num_workers, 如果仅仅使用get_data_loader方法, 可以不传
+        """
+        # 处理默认参数
+        if basins_file is None:
+            basins_file = settings.basins_file
+        logger.info(f'Using basin list: {basins_file}')
+        self.default_start_time = default_start_time
+        self.default_end_time = default_end_time
+        self.default_numstep = default_numstep
+        self.default_lead_time = default_lead_time
+        self.default_batch_size = default_batch_size
+        self.default_num_workers = default_num_workers
+
         # 加载标准化数据的均值方差
         dynamic_meanstd = None
         if settings.dynamic_mean_std is not None:
             dynamic_meanstd = pd.read_csv(settings.mean_std_dir / settings.dynamic_mean_std, index_col=0)
 
         # 加载数据
-        basin_list = load_basin_list(settings.basin_list_dir / settings.basins_file)
-        self.dataset = load_xarray_dataset(settings.dataset_path, basin_list, 
+        self.basin_list = load_basin_list(settings.basin_list_dir / basins_file)
+        self.dataset = load_xarray_dataset(settings.dataset_path, self.basin_list, 
                                            settings.basins_file, settings.meanstd_dir, dynamic_meanstd)
 
-    def get_data_loader(self, start_time: str, end_time: str, batch_size: int = 256,
+    def get_data_loader(self, start_time: str = None, end_time: str = None, batch_size: int = 256,
                         num_timestep: int = 8, lead_time: int = 6, num_workers: int = 8):
+        if start_time is None:
+            start_time = self.default_start_time
+        if end_time is None:
+            end_time = self.default_end_time
+
         dataset = MyDataset(self.dataset, start_time, end_time,
                             settings.forcing_attrs, settings.target_var, num_timestep, lead_time)
         return DataLoader(dataset, batch_size, shuffle=True, num_workers=num_workers)
+    
+    def __len__(self):
+        return len(self.basin_list)
+    
+    def __getitem__(self, idx: int):
+        if idx < 0 or idx >= len(self.basin_list):
+            raise IndexError(f'Index {idx} out of range')
+        this_basin = self.dataset.sel(basin=self.basin_list[idx]).expand_dims('basin')  # 选择一个流域后, basin维度会消失, 因此需要用expand_dims重新加上
+        dataset = MyDataset(this_basin, self.default_start_time, self.default_end_time,
+                            settings.forcing_attrs, settings.target_var, self.default_numstep, self.default_lead_time)
+        loader = DataLoader(dataset, self.default_batch_size, shuffle=True, num_workers=self.default_num_workers)
+        return {'loader': loader, 'basin': self.basin_list[idx]}
 
 
 if __name__ == '__main__':
-    datahub = DataInterface()
-    loader = datahub.get_data_loader('1990-01-01T00', '1995-01-01T00')
-    for batch in loader:
-        print(batch['x'].shape)
-        print(batch['y'].shape)
-        input()
+    logger.remove() # 禁用日志
+
+    datahub = DataInterface('Region_03_train.txt', '1990-01-01T00', '1995-01-01T00')
+    print(datahub[0])
+    # loader = datahub.get_data_loader('1990-01-01T00', '1995-01-01T00')
+    # for batch in loader:
+    #     print(batch['x'].shape)
+    #     print(batch['y'].shape)
+    #     input()

@@ -96,7 +96,7 @@ class HybirdModel(nn.Module):
     
     @staticmethod
     def NSE(y_hat, y):
-        """计算一个batch的七天的NSE (Nash-Sutcliffe model efficiency coefficient)
+        """计算一个batch的NSE (Nash-Sutcliffe model efficiency coefficient)
         Parameters:
          - y_hat: (batch_size, seq_len)
          - y: (batch_size, seq_len)
@@ -109,9 +109,61 @@ class HybirdModel(nn.Module):
         numerator = ((y_hat - y)**2).sum()
         value = 1 - (numerator / denominator)
         return float(value)
+    
+    @staticmethod
+    def RMSE(y_hat, y):
+        """计算一个batch的RMSE (Root Mean Square Error)
+        Parameters:
+         - y_hat: (batch_size, seq_len)
+         - y: (batch_size, seq_len)
+        """
+        mask = ~torch.isnan(y)
+        y = y[mask]             # (batch_size * seq_len)
+        y_hat = y_hat[mask]
+
+        value = torch.sqrt(((y - y_hat)**2).mean())
+        return float(value)
+    
+    @staticmethod
+    def MAE(y_hat, y):
+        """计算一个batch的MAE (Mean Absolute Error)
+        Parameters:
+         - y_hat: (batch_size, seq_len)
+         - y: (batch_size, seq_len)
+        """
+        mask = ~torch.isnan(y)
+        y = y[mask]             # (batch_size * seq_len)
+        y_hat = y_hat[mask]
+
+        value = (y - y_hat).abs().mean()
+        return float(value)
+    
+    @staticmethod
+    def Bias(y_hat, y):
+        """计算一个batch的Bias (Mean Bias Error)
+        Parameters:
+         - y_hat: (batch_size, seq_len)
+         - y: (batch_size, seq_len)
+        """
+        mask = ~torch.isnan(y)
+        y = y[mask]             # (batch_size * seq_len)
+        y_hat = y_hat[mask]
+
+        denominator = y.sum()
+        numerator = (y_hat - y).sum()
+        value = numerator / denominator
+        return float(value)
 
 if __name__ == '__main__':
-    model = HybirdModel(dynamic_input_dim=11, num_timestep=8, lead_time=6)
-    x = torch.randn(32, 8, 11)
+    # model = HybirdModel(dynamic_input_dim=12, num_timestep=8, lead_time=6)
+    # x = torch.randn(32, 8, 12)
     # print(model(x).shape)
-    summary(model, input_size=(4096, 8, 11))
+
+    y = torch.randn(2, 6)
+    y_hat = torch.randn(2, 6)
+    y[0, 0] = float('nan')
+    # NSE, RMSE, MAE, Bias
+    print(HybirdModel.NSE(y_hat, y))
+    print(HybirdModel.RMSE(y_hat, y))
+    print(HybirdModel.MAE(y_hat, y))
+    print(HybirdModel.Bias(y_hat, y))

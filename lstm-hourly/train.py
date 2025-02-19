@@ -1,9 +1,9 @@
 from model import MyModel
 from hourly_data import DataInterface
-from rich.progress import track
 from pathlib import Path
 from args import Args
 from loguru import logger
+from tqdm import tqdm
 
 import os
 import sys
@@ -36,7 +36,7 @@ class TrainInterface(object):
 
         num_batch = 0.0
         losssum = 0.0
-        for batch in track(train_loader, description=f'epoch {epoch}'):
+        for batch in tqdm(train_loader, desc=f'epoch {epoch}'):
             # 在加载数据时将数据转移到Device上
             x_h = batch['x_h'].to(device)
             x_f = batch['x_f'].to(device)
@@ -73,7 +73,7 @@ class TrainInterface(object):
         num_batch = 0.0
         avg_NSE = 0.0
         with torch.no_grad():
-            for batch in val_loader:
+            for batch in tqdm(val_loader, desc='validating'):
                 # 在加载数据时将数据转移到Device上
                 x_h = batch['x_h'].to(device)
                 x_f = batch['x_f'].to(device)
