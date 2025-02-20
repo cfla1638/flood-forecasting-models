@@ -4,6 +4,46 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, List, Tuple, Union
 
+class TemporalFiLM(nn.Module):
+    def __init__(self, feature_dim, condition_dim, timesteps):
+        """
+        Parameters:
+         - feature_dim: 输入的特征维度
+         - condition_dim: 条件的维度
+         - timesteps: 时间步长度
+        """
+        super(TemporalFiLM, self).__init__()
+        self.feature_dim = feature_dim
+        self.timesteps = timesteps
+        
+        # 为固定时间步长生成γ和β参数
+        self.fc_gamma = nn.Linear(condition_dim, feature_dim * timesteps)
+        self.fc_beta = nn.Linear(condition_dim, feature_dim * timesteps)
+        
+    def forward(self, x : torch.Tensor, condition : torch.Tensor) -> torch.Tensor:
+        """
+        Parameters:
+         - x: 输入的时间序列数据，[batch, T, feature_dim]
+         - condition: 条件数据，[batch, condition_dim]
+        Return: FiLM后的数据，[batch, T, feature_dim]
+        """
+        batch_size, T, _ = x.shape
+        
+        # 确保输入的时间步长与模块初始化时指定的时间步长一致
+        assert T == self.timesteps, f"Expected timesteps {self.timesteps}, but got {T}"
+        
+        # 生成所有时间步的gamma和beta参数
+        gamma = self.fc_gamma(condition)  # [batch, feature_dim * timesteps]
+        beta = self.fc_beta(condition)    # [batch, feature_dim * timesteps]
+        
+        # 重塑形状以匹配时间维度
+        # 从 [batch, feature_dim * timesteps] -> [batch, timesteps, feature_dim]
+        gamma = gamma.view(batch_size, self.timesteps, self.feature_dim)
+        beta = beta.view(batch_size, self.timesteps, self.feature_dim)
+        
+        # 应用FiLM变换
+        return gamma * x + beta
+
 class EncoderBlock(nn.Module):
     def __init__(self, dim: int, num_head: int, dropout: float = 0.1) -> None:
         """
@@ -31,15 +71,17 @@ class EncoderBlock(nn.Module):
         return self.layer_norm2(x + self.dropout(conv1d_output))
 
 class MyModel(nn.Module):
-    def __init__(self, dynamic_input_dim: int, num_timestep: int, lead_time: int, dropout=0.1) -> None:
+    # 位置编码还得加！！！
+    def __init__(self, 
+                 dynamic_input_dim: int,    # 输入序列数据的维度
+                 static_input_dim: int,     # 输入序列数据的维度
+                 dynamic_embd_dim: int = 32, # 动态数据的embedding维度
+                 static_embd_dim: int = 32,  # 静态数据的embedding维度
+                 num_timestep: int = 8,     # 根据过去几个小时的数据预测
+                 lead_time: int = 6,        # 预测未来几个消失的数据
+                 num_head: int = 8,         # 多头注意力的头数
+                 dropout=0.1) -> None:
         super().__init__()
-        self.dynamic_embd_dim = 32          # 输入序列数据的维度
-        self.num_timestep = num_timestep    # 根据过去几个小时的数据预测
-        self.lead_time = lead_time          # 预测未来几个消失的数据
-        self.num_head = 8                   # 多头自注意力的头数
-        self.lstm_hidden_dim = 256          # LSTM的隐藏单元数目
-        self.global_embd_dim = 128          # 最后与LSTM数据拼接的包含全局特征的向量的维度
-        self.dropout = nn.Dropout(dropout)
 
         # 对数据进行embeding的网络
         self.dynamic_embd_net = nn.Sequential(
@@ -51,39 +93,6 @@ class MyModel(nn.Module):
 
         # LSTM
         self.lstm = nn.LSTM(self.dynamic_embd_dim, self.lstm_hidden_dim, batch_first=True)
-
-        # Multi-Head self Attention
-        self.self_attention = nn.MultiheadAttention(self.lstm_hidden_dim, self.num_head, batch_first=True)
-
-        # 用于多头自注意力后的残差连接的Layer Normalization
-        self.layer_norm1 = nn.LayerNorm(self.lstm_hidden_dim)
-
-        # 对应论文中的Weight Layer
-        self.weight_layer_1 = nn.Sequential(
-            nn.Linear(self.lstm_hidden_dim, self.lstm_hidden_dim),
-            nn.ReLU(),
-            nn.Linear(self.lstm_hidden_dim, self.lstm_hidden_dim),
-            nn.ReLU()
-        )
-
-        # Weight的残差连接的Layer Normalization
-        self.layer_norm2 = nn.LayerNorm(self.lstm_hidden_dim)
-
-        # 残差连接后的Liner
-        self.weight_layer_2 = nn.Linear(self.lstm_hidden_dim, self.lstm_hidden_dim)
-
-        # 一维卷积
-        self.conv = nn.Conv1d(self.lstm_hidden_dim, self.lstm_hidden_dim, 3, padding='same')
-
-        # 全局平均池化
-        self.GAP = nn.AdaptiveAvgPool1d(output_size=1)
-
-        # 卷积池化后的全连接层
-        self.dense = nn.Sequential(
-            nn.Linear(self.lstm_hidden_dim, self.global_embd_dim),
-            nn.ReLU(),
-            nn.Linear(self.global_embd_dim, self.global_embd_dim),
-        )
 
         # 生成预测数据的全连接网络
         self.pred_net = nn.Sequential(
@@ -99,43 +108,81 @@ class MyModel(nn.Module):
          - x: (batch_size, seq_len, input_dim)
         Return: (batch_size, lead_time)
         """
-        x = self.dynamic_embd_net(x)    # (batch_size, seq_len, embd_dim)
-        lstm_output, _ = self.lstm(x)             # (batch_size, seq_len, lstm_embd_dim)
-        attn_output, _ = self.self_attention(lstm_output, lstm_output, lstm_output)    # (batch_size, seq_len, lstm_embd_dim)
-        x = self.layer_norm1(lstm_output + self.dropout(attn_output))
-        wl_output = self.weight_layer_1(x)
-        x = self.layer_norm2(x + self.dropout(wl_output))
-        x = self.weight_layer_2(x)
-        # (batch_size, seq_len, lstm_embd_dim)
-
-        x = self.conv(x.transpose(1, 2))    # (batch_size, dim, seq_len)
-        x = self.GAP(x) # (batch_size, dim, 1)
-        x = x.squeeze() # (batch_size, dim)
-
-        x = self.dense(self.dropout(x))
-
-        x = x.unsqueeze(1)  # (batch_size, 1, dim)
-        x = torch.concat((x.expand(-1, self.num_timestep,-1), lstm_output), dim=2)
-
-        return self.pred_net(x.flatten(1))
+        pass
     
     @staticmethod
     def NSE(y_hat, y):
-        """计算一个batch的七天的NSE (Nash-Sutcliffe model efficiency coefficient)
+        """计算一个 batch 的 NSE (Nash-Sutcliffe model efficiency coefficient)，
+        自动忽略 y 全相同的样本，以避免数值不稳定。
+        
+        Parameters:
+         - y_hat: (batch_size, seq_len)
+         - y: (batch_size, seq_len)
+        """
+        mask = ~torch.isnan(y)
+        y_hat = y_hat[mask]
+        y = y[mask]
+        
+        eps = 1e-8  # 避免数值问题
+        mean_y = torch.mean(y)
+        denominator = ((y - mean_y) ** 2).sum()
+        
+        # 只计算有效 NSE
+        if denominator < eps:
+            return 0  # 返回 NaN 以指示无效值
+        
+        numerator = ((y_hat - y) ** 2).sum()
+        value = 1 - (numerator / (denominator + eps))
+        
+        return float(value)
+
+    
+    @staticmethod
+    def RMSE(y_hat, y):
+        """计算一个batch的RMSE (Root Mean Square Error)
         Parameters:
          - y_hat: (batch_size, seq_len)
          - y: (batch_size, seq_len)
         """
         mask = ~torch.isnan(y)
         y = y[mask]             # (batch_size * seq_len)
-        y_hat = y_hat[mask]     # (batch_size * seq_len)
+        y_hat = y_hat[mask]
 
-        denominator = ((y - y.mean())**2).sum()
-        numerator = ((y_hat - y)**2).sum()
-        value = 1 - (numerator / denominator)
+        value = torch.sqrt(((y - y_hat)**2).mean())
+        return float(value)
+    
+    @staticmethod
+    def MAE(y_hat, y):
+        """计算一个batch的MAE (Mean Absolute Error)
+        Parameters:
+         - y_hat: (batch_size, seq_len)
+         - y: (batch_size, seq_len)
+        """
+        mask = ~torch.isnan(y)
+        y = y[mask]             # (batch_size * seq_len)
+        y_hat = y_hat[mask]
+
+        value = (y - y_hat).abs().mean()
+        return float(value)
+    
+    @staticmethod
+    def Bias(y_hat, y):
+        """计算一个batch的Bias (Mean Bias Error)
+        Parameters:
+         - y_hat: (batch_size, seq_len)
+         - y: (batch_size, seq_len)
+        """
+        mask = ~torch.isnan(y)
+        y = y[mask]             # (batch_size * seq_len)
+        y_hat = y_hat[mask]
+
+        denominator = y.sum()
+        numerator = (y_hat - y).sum()
+        value = numerator / denominator
         return float(value)
 
 if __name__ == '__main__':
     x = torch.randn(32, 8, 24)
-    model = EncoderBlock(24, 8)
-    print(model(x).shape)
+    cond = torch.randn(32, 16)
+    model = TemporalFiLM(24, 16, 8)
+    print(model(x, cond).shape)

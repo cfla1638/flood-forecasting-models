@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, List, Tuple, Union
 from torchinfo import summary
+from loguru import logger
 
 class HybirdModel(nn.Module):
     def __init__(self, dynamic_input_dim: int, num_timestep: int, lead_time: int, dropout=0.1) -> None:
@@ -96,19 +97,30 @@ class HybirdModel(nn.Module):
     
     @staticmethod
     def NSE(y_hat, y):
-        """计算一个batch的NSE (Nash-Sutcliffe model efficiency coefficient)
+        """计算一个 batch 的 NSE (Nash-Sutcliffe model efficiency coefficient)，
+        自动忽略 y 全相同的样本，以避免数值不稳定。
+        
         Parameters:
          - y_hat: (batch_size, seq_len)
          - y: (batch_size, seq_len)
         """
         mask = ~torch.isnan(y)
-        y = y[mask]             # (batch_size * seq_len)
-        y_hat = y_hat[mask]     # (batch_size * seq_len)
-
-        denominator = ((y - y.mean())**2).sum()
-        numerator = ((y_hat - y)**2).sum()
-        value = 1 - (numerator / denominator)
+        y_hat = y_hat[mask]
+        y = y[mask]
+        
+        eps = 1e-8  # 避免数值问题
+        mean_y = torch.mean(y)
+        denominator = ((y - mean_y) ** 2).sum()
+        
+        # 只计算有效 NSE
+        if denominator < eps:
+            return 0  # 返回 NaN 以指示无效值
+        
+        numerator = ((y_hat - y) ** 2).sum()
+        value = 1 - (numerator / (denominator + eps))
+        
         return float(value)
+
     
     @staticmethod
     def RMSE(y_hat, y):

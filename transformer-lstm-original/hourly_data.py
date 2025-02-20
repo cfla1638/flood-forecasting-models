@@ -209,14 +209,16 @@ class DataInterface(object):
         dataset = MyDataset(this_basin, self.default_start_time, self.default_end_time,
                             settings.forcing_attrs, settings.target_var, self.default_numstep, self.default_lead_time)
         loader = DataLoader(dataset, self.default_batch_size, shuffle=True, num_workers=self.default_num_workers)
-        return {'loader': loader, 'basin': self.basin_list[idx]}
+        return self.basin_list[idx], loader
 
 
 if __name__ == '__main__':
     logger.remove() # 禁用日志
 
     datahub = DataInterface('Region_03_train.txt', '1990-01-01T00', '1995-01-01T00')
-    print(datahub[0])
+    for basin, loader in datahub:
+        print(basin)
+        input()
     # loader = datahub.get_data_loader('1990-01-01T00', '1995-01-01T00')
     # for batch in loader:
     #     print(batch['x'].shape)
