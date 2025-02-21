@@ -40,8 +40,8 @@ def draw_basins(basin_list):
     # 绘制站点
     gdf.plot(ax=ax, color="red", markersize=50, alpha=0.8, edgecolor="black", label="Gauge Stations")
 
-    # 添加底图
-    ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik, alpha=0.5)
+    tile_url = "http://wprd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}"
+    ctx.add_basemap(ax, source=tile_url, alpha=0.5)
 
     # 设置图例和标题
     ax.legend()
@@ -111,7 +111,10 @@ def draw_with_metric(basin_list, metric):
 
 
 if __name__ == '__main__':
-    basin_list_path = '../data/basin_list/train_val_test/Region_03_train.txt'  # 流域列表路径
-    basin_list = load_basin_list(Path(basin_list_path))
-    metrics = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9, -1]
-    draw_with_metric(basin_list, metrics)
+    # basin_list_path = '../data/basin_list/train_val_test/Region_03_train.txt'  # 流域列表路径
+    # basin_list = load_basin_list(Path(basin_list_path))
+    # metrics = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9, -1]
+    # draw_with_metric(basin_list, metrics)
+    basin_list = '../data/basin_list/516_basins_hourly.txt'
+    basin_list = load_basin_list(Path(basin_list))
+    draw_basins(basin_list)
