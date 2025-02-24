@@ -288,6 +288,10 @@ class DataInterface(object):
         attrs = load_camels_us_attributes(settings.dataset_dir, self.basin_list)
         self.static_ds = load_static_attributes(attrs, settings.attribute_list, settings.basins_file, settings.meanstd_dir, static_meanstd)
 
+        # 计算默认时间段每个流域的流量值的均值
+        data_within_default_time = self.dynamic_ds.sel(date=slice(self.default_start_time, self.default_end_time))
+        self.basins_mean = data_within_default_time[settings.target_var].mean('date').to_dataframe().to_dict()['qobs_mm_per_hour']  # dict: {basin: mean_value}
+
     def get_data_loader(self, start_time: str = None, end_time: str = None, batch_size: int = 256,
                         hindcast_length: int = 8, forecast_horizon: int = 6, num_workers: int = 8):
         if start_time is None:
@@ -298,6 +302,15 @@ class DataInterface(object):
         dataset = MyDataset(self.dynamic_ds, self.static_ds, start_time, end_time,
                             settings.forcing_attrs, settings.target_var, hindcast_length, forecast_horizon)
         return DataLoader(dataset, batch_size, shuffle=True, num_workers=num_workers)
+    
+    def get_loader_by_basin(self, basin, shuffle=False):
+        if basin not in self.basin_list:
+            raise ValueError(f'Basin {basin} not in the list')
+        this_basin = self.dynamic_ds.sel(basin=basin).expand_dims('basin')
+        dataset = MyDataset(this_basin, self.static_ds, self.default_start_time, self.default_end_time,
+                            settings.forcing_attrs, settings.target_var, self.default_numstep, self.default_lead_time)
+        loader = DataLoader(dataset, self.default_batch_size, shuffle=shuffle, num_workers=self.default_num_workers)
+        return loader   
 
     def __len__(self):
         return len(self.basin_list)
@@ -315,15 +328,15 @@ class DataInterface(object):
 if __name__ == '__main__':
     # logger.remove() # 禁用日志
 
-    # datahub = DataInterface('Region_03_train.txt', '1990-01-01T00', '1995-01-01T00')
+    datahub = DataInterface('Region_03_train.txt', '1990-01-01T00', '1995-01-01T00')
     # loader = datahub.get_data_loader('1990-01-01T00', '1995-01-01T00', num_workers=1)
     # for batch in loader:
     #     print(batch['x_d'].shape)
     #     print(batch['x_s'].shape)
     #     print(batch['y'].shape)
     #     input()
-    basin_list = load_basin_list(settings.basin_list_dir / settings.basins_file)
-    ds = load_xarray_dataset(settings.dataset_path, basin_list, settings.basins_file, settings.meanstd_dir)
-    this_basin = ds.sel(basin='02111500').expand_dims('basin')
-    df = this_basin.to_dataframe()
-    df.to_csv('02111500.csv')
+    # basin_list = load_basin_list(settings.basin_list_dir / settings.basins_file)
+    # ds = load_xarray_dataset(settings.dataset_path, basin_list, settings.basins_file, settings.meanstd_dir)
+    # this_basin = ds.sel(basin='02111500').expand_dims('basin')
+    # df = this_basin.to_dataframe()
+    # df.to_csv('02111500.csv')

@@ -14,7 +14,7 @@ static_mean_std = None    # 用于标准化静态数据的均值方差, 可以�
 example_basin = '01013500'  # 供测试使用的流域编号
 
 # 存储DataInterface加载的流域标号
-basins_file = 'Region_03_train.txt'
+basins_file = 'Region_03_train_10.txt'
 
 # 使用静态属性的列表
 attribute_list = ['p_mean',

@@ -31,6 +31,9 @@ train_basin_list = basin_list[:20]
 val_basin_list = basin_list[20:30]
 test_basin_list = basin_list[30:40]
 
-save_list(train_basin_list, Path('./Region_03_train.txt'))
-save_list(val_basin_list, Path('./Region_03_val.txt'))
-save_list(test_basin_list, Path('./Region_03_test.txt'))
+train_basin_list_10 = basin_list[40:50]
+
+save_list(train_basin_list_10, Path('./Region_03_train_10.txt'))
+# save_list(train_basin_list, Path('./Region_03_train.txt'))
+# save_list(val_basin_list, Path('./Region_03_val.txt'))
+# save_list(test_basin_list, Path('./Region_03_test.txt'))

@@ -1,4 +1,4 @@
-from model import MyModel
+from model import MyModel, init_weights
 from hourly_data import DataInterface
 from tqdm import tqdm
 from pathlib import Path
@@ -14,7 +14,7 @@ def setup_logger():
     # 设置logger
     logger.remove()
     logger.add(sys.stdout, level="INFO", format="{message}")
-    logger.add("./log/log{time}.log", level="INFO", rotation="20 MB")
+    logger.add("./log/log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
 
 class TrainInterface(object):
     def __init__(self, opts) -> None:
@@ -37,7 +37,7 @@ class TrainInterface(object):
 
         num_batch = 0.0
         losssum = 0.0
-        for batch in tqdm(train_loader, desc=f'epoch {epoch}'):
+        for batch in tqdm(train_loader, desc=f'Epoch {epoch}'):
             # 在加载数据时将数据转移到Device上
             x_d = batch['x_d'].to(device)
             x_s = batch['x_s'].to(device)
@@ -114,6 +114,8 @@ class TrainInterface(object):
         val_loader = data_interface.get_data_loader(opts.val_start_time, opts.val_end_time, opts.batch_size)
 
         model = MyModel(12, 27, num_timestep=8, lead_time=6)
+        model.apply(init_weights)
+        logger.info('Model initialized.')
 
         # 检查是否要加载预训练的模型
         if opts.pretrain is not None:
@@ -148,6 +150,6 @@ if __name__ == '__main__':
     train_interface.main()
 
 # python train.py --batch_size=256 --train_start_time=1999-10-01T00 --train_end_time=2004-10-01T00 --epoch=50 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --val_start_time=2005-10-01T00 --val_end_time=2007-10-01T00
-# python train.py --batch_size=256 --train_start_date=1999-10-01 --train_end_date=2002-09-30 --epoch=20 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --pretrain=./checkpoints/epoch10.tar --val_start_date=1995-10-01 --val_end_date=1997-09-30 --start_epoch=11
+# python train.py --batch_size=256 --train_start_time=1999-10-01T00 --train_end_time=2004-10-01T00 --epoch=50 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --pretrain=./checkpoints/epoch10.pth --val_start_time=2005-10-01T00 --val_end_time=2007-10-01T00 --start_epoch=11
 
 # scp -rP 54212 ./data/CAMELS_US/hourly/ root@connect.yza1.seetacloud.com:/root/autodl-tmp

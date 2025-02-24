@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, List, Tuple, Union
 from torchinfo import summary
+from loguru import logger
 
 class TemporalFiLM(nn.Module):
     def __init__(self, feature_dim, condition_dim, timesteps):
@@ -157,8 +158,8 @@ class MyModel(nn.Module):
         y_hat = y_hat[mask]
         y = y[mask]
         
+        eps = 1e-8  # 避免数值问题
         if mean_y is None:
-            eps = 1e-8  # 避免数值问题
             mean_y = torch.mean(y)
 
         denominator = ((y - mean_y) ** 2).sum()
@@ -214,11 +215,36 @@ class MyModel(nn.Module):
         numerator = (y_hat - y).sum()
         value = numerator / denominator
         return float(value)
+    
+def init_weights(model):
+    for m in model.modules():
+        if isinstance(m, nn.Linear):
+            nn.init.xavier_uniform_(m.weight)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+        elif isinstance(m, nn.Conv1d):
+            nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+        elif isinstance(m, nn.GRU):
+            for name, param in m.named_parameters():
+                if "weight_ih" in name:
+                    nn.init.kaiming_normal_(param, mode="fan_in", nonlinearity="relu")
+                elif "weight_hh" in name:
+                    nn.init.orthogonal_(param)
+                elif "bias" in name:
+                    nn.init.zeros_(param)
+        elif isinstance(m, nn.MultiheadAttention):
+            for name, param in m.named_parameters():
+                if "weight" in name:
+                    nn.init.xavier_uniform_(param)
+                elif "bias" in name:
+                    nn.init.zeros_(param)
 
 if __name__ == '__main__':
     x_d = torch.randn(32, 8, 12)
     x_s = torch.randn(32, 27)
     model = MyModel(12, 27)
+    model.apply(init_weights)
     y = model(x_d, x_s)
     print(y.shape)
-    summary(model, input_size=[(256, 8, 12), (256, 27)])
