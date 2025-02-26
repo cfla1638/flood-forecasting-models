@@ -70,6 +70,7 @@ class EncoderBlock(nn.Module):
         attn_output, _ = self.multi_head_attention(x, x, x) # (batch_size, seq_len, input_dim)
         x = self.layer_norm1(x + self.dropout(attn_output)) # (batch_size, seq_len, input_dim)
         conv1d_output = self.conv(x.transpose(-1, -2)).transpose(-1, -2)
+        conv1d_output = F.leaky_relu(conv1d_output, negative_slope=0.1)
         return self.layer_norm2(x + self.dropout(conv1d_output))
 
 class MyModel(nn.Module):
@@ -81,7 +82,7 @@ class MyModel(nn.Module):
                  num_timestep: int = 8,     # 根据过去几个小时的数据预测
                  lead_time: int = 6,        # 预测未来几个消失的数据
                  num_head: int = 8,         # 多头注意力的头数
-                 encoder_layers: int = 2,   # 编码器的层数
+                 encoder_layers: int = 3,   # 编码器的层数
                  dropout=0.1) -> None:
         super().__init__()
 
@@ -117,7 +118,7 @@ class MyModel(nn.Module):
         # Output Layer
         self.output_layer = nn.Sequential(
             nn.Linear(dynamic_embd_dim * num_timestep, 64),
-            nn.ReLU(),
+            nn.LeakyReLU(negative_slope=0.1),
             nn.Linear(64, lead_time)
         )
 
@@ -142,79 +143,6 @@ class MyModel(nn.Module):
 
         # Output Layer
         return self.output_layer(x_d.flatten(1))       # (batch_size, lead_time)
-
-    
-    @staticmethod
-    def NSE(y_hat, y, mean_y=None):
-        """计算一个 batch 的 NSE (Nash-Sutcliffe model efficiency coefficient),
-        自动忽略 y 全相同的样本，以避免数值不稳定。
-        
-        Parameters:
-         - y_hat: (batch_size, seq_len)
-         - y: (batch_size, seq_len)
-         - mean_y: y 观测值的均值, 默认None表示逐Batch计算均值; 若提供, 则使用该值(适合整体NSE计算)
-        """
-        mask = ~torch.isnan(y)
-        y_hat = y_hat[mask]
-        y = y[mask]
-        
-        eps = 1e-8  # 避免数值问题
-        if mean_y is None:
-            mean_y = torch.mean(y)
-
-        denominator = ((y - mean_y) ** 2).sum()
-        if denominator < eps:   # 只计算有效 NSE
-            return 0
-        
-        numerator = ((y_hat - y) ** 2).sum()
-        value = 1 - (numerator / (denominator + eps))
-        
-        return float(value)
-
-    
-    @staticmethod
-    def RMSE(y_hat, y):
-        """计算一个batch的RMSE (Root Mean Square Error)
-        Parameters:
-         - y_hat: (batch_size, seq_len)
-         - y: (batch_size, seq_len)
-        """
-        mask = ~torch.isnan(y)
-        y = y[mask]             # (batch_size * seq_len)
-        y_hat = y_hat[mask]
-
-        value = torch.sqrt(((y - y_hat)**2).mean())
-        return float(value)
-    
-    @staticmethod
-    def MAE(y_hat, y):
-        """计算一个batch的MAE (Mean Absolute Error)
-        Parameters:
-         - y_hat: (batch_size, seq_len)
-         - y: (batch_size, seq_len)
-        """
-        mask = ~torch.isnan(y)
-        y = y[mask]             # (batch_size * seq_len)
-        y_hat = y_hat[mask]
-
-        value = (y - y_hat).abs().mean()
-        return float(value)
-    
-    @staticmethod
-    def Bias(y_hat, y):
-        """计算一个batch的Bias (Mean Bias Error)
-        Parameters:
-         - y_hat: (batch_size, seq_len)
-         - y: (batch_size, seq_len)
-        """
-        mask = ~torch.isnan(y)
-        y = y[mask]             # (batch_size * seq_len)
-        y_hat = y_hat[mask]
-
-        denominator = y.sum()
-        numerator = (y_hat - y).sum()
-        value = numerator / denominator
-        return float(value)
     
 def init_weights(model):
     for m in model.modules():

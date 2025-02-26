@@ -19,11 +19,12 @@ def save_list(list, path):
         for item in list:
             f.write(f'{item}\n')
 
-basin_list_path = Path('../data/basin_list/huc_516/Region_03.txt')
+# basin_list_path = Path('../data/basin_list/huc_516/Region_03.txt')
+basin_list_path = Path('../data/basin_list/516_basins_hourly.txt')
 basin_list = load_basin_list(basin_list_path)
 
 # 打乱流域列表
-np.random.seed(8010)
+# np.random.seed(8010)
 np.random.shuffle(basin_list)
 
 # 保存20个流域为训练集，10个流域为验证集，10个流域为测试集, 保存到文件中，每行一个流域
@@ -31,9 +32,9 @@ train_basin_list = basin_list[:20]
 val_basin_list = basin_list[20:30]
 test_basin_list = basin_list[30:40]
 
-train_basin_list_10 = basin_list[40:50]
+train_basin_list_128 = basin_list[:32]
 
-save_list(train_basin_list_10, Path('./Region_03_train_10.txt'))
+save_list(train_basin_list_128, Path('./32_basin_list.txt'))
 # save_list(train_basin_list, Path('./Region_03_train.txt'))
 # save_list(val_basin_list, Path('./Region_03_val.txt'))
 # save_list(test_basin_list, Path('./Region_03_test.txt'))

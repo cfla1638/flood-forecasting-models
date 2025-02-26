@@ -4,6 +4,7 @@ from tqdm import tqdm
 from pathlib import Path
 from args import Args
 from loguru import logger
+from metrics import NSE, RMSE, MAE, Bias
 
 import os
 import sys
@@ -79,10 +80,10 @@ class TrainInterface(object):
                 y = batch['y'].to(device)
 
                 y_hat = model(x_d, x_s)
-                avg_NSE += MyModel.NSE(y_hat, y)
-                avg_RMSE += MyModel.RMSE(y_hat, y)
-                avg_MAE += MyModel.MAE(y_hat, y)
-                avg_Bias += MyModel.Bias(y_hat, y)
+                avg_NSE += NSE(y_hat, y)
+                avg_RMSE += RMSE(y_hat, y)
+                avg_MAE += MAE(y_hat, y)
+                avg_Bias += Bias(y_hat, y)
                 num_batch += 1
         logger.info(f'Average NSE: {avg_NSE / num_batch: .4f} | Average RMSE: {avg_RMSE / num_batch: .4f} | Average MAE: {avg_MAE / num_batch: .4f} | Average Bias: {avg_Bias / num_batch: .4f}')
 
@@ -109,9 +110,9 @@ class TrainInterface(object):
             os.mkdir(opts.checkpoints_dir)
             logger.info(f'Create checkpoints dir {opts.checkpoints_dir}')
         
-        data_interface = DataInterface()
-        train_loader = data_interface.get_data_loader(opts.train_start_time, opts.train_end_time, opts.batch_size)
-        val_loader = data_interface.get_data_loader(opts.val_start_time, opts.val_end_time, opts.batch_size)
+        data_interface = DataInterface(opts.basins_list)
+        train_loader = data_interface.get_data_loader(opts.train_start_time, opts.train_end_time, opts.batch_size, num_workers=opts.num_workers)
+        val_loader = data_interface.get_data_loader(opts.val_start_time, opts.val_end_time, opts.batch_size, num_workers=opts.num_workers)
 
         model = MyModel(12, 27, num_timestep=8, lead_time=6)
         model.apply(init_weights)
@@ -149,7 +150,7 @@ if __name__ == '__main__':
     train_interface = TrainInterface(args.get_opts())
     train_interface.main()
 
-# python train.py --batch_size=256 --train_start_time=1999-10-01T00 --train_end_time=2004-10-01T00 --epoch=50 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --val_start_time=2005-10-01T00 --val_end_time=2007-10-01T00
-# python train.py --batch_size=256 --train_start_time=1999-10-01T00 --train_end_time=2004-10-01T00 --epoch=50 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --pretrain=./checkpoints/epoch10.pth --val_start_time=2005-10-01T00 --val_end_time=2007-10-01T00 --start_epoch=11
+# python train.py --batch_size=256 --train_start_time=1999-10-01T00 --train_end_time=2003-10-01T00 --epoch=50 --save_freq=1 --use_GPU --GPU_id=0 --val_freq=3 --val_start_time=2005-10-01T00 --val_end_time=2006-10-01T00 --num_workers=8 --basins_list=32_basin_list.txt --pretrain=./checkpoints/epoch3.pth --start_epoch=4
+# python train.py --batch_size=256 --train_start_time=1999-10-01T00 --train_end_time=2004-10-01T00 --epoch=50 --save_freq=3 --use_GPU --GPU_id=0 --val_freq=3 --pretrain=./checkpoints/epoch10.pth --val_start_time=2005-10-01T00 --val_end_time=2007-10-01T00 --start_epoch=11
 
 # scp -rP 54212 ./data/CAMELS_US/hourly/ root@connect.yza1.seetacloud.com:/root/autodl-tmp

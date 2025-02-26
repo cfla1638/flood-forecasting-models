@@ -284,9 +284,9 @@ class DataInterface(object):
         # 加载数据
         self.basin_list = load_basin_list(settings.basin_list_dir / basins_file)
         self.dynamic_ds = load_xarray_dataset(settings.dataset_path, self.basin_list, 
-                                           settings.basins_file, settings.meanstd_dir, dynamic_meanstd)
+                                           basins_file, settings.meanstd_dir, dynamic_meanstd)
         attrs = load_camels_us_attributes(settings.dataset_dir, self.basin_list)
-        self.static_ds = load_static_attributes(attrs, settings.attribute_list, settings.basins_file, settings.meanstd_dir, static_meanstd)
+        self.static_ds = load_static_attributes(attrs, settings.attribute_list, basins_file, settings.meanstd_dir, static_meanstd)
 
         # 计算默认时间段每个流域的流量值的均值
         data_within_default_time = self.dynamic_ds.sel(date=slice(self.default_start_time, self.default_end_time))
