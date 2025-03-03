@@ -1,6 +1,6 @@
 from pathlib import Path
 
-basin_list_dir = Path('../data/basin_list/train_val_test/')     # 流域编号列表目录
+basin_list_dir = Path('../data/basin_list/')     # 流域编号列表目录
 
 dataset_dir = Path('../data/CAMELS_US')      # 数据集路径
 

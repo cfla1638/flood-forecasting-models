@@ -186,66 +186,21 @@ class MyModel(nn.Module):
         p = y_hat['pi'].detach()
         pred = (m * p).sum(dim=-1)
         return pred     # batch_size seq_len
-    
-    @staticmethod
-    def NSE(y_hat, y):
-        """计算一个batch的七天的NSE (Nash-Sutcliffe model efficiency coefficient)
-        Parameters:
-         - y_hat: (batch_size, seq_len)
-         - y: (batch_size, seq_len)
-        """
-        mask = ~torch.isnan(y)
-        y = y[mask]             # (batch_size * seq_len)
-        y_hat = y_hat[mask]     # (batch_size * seq_len)
 
-        denominator = ((y - y.mean())**2).sum()
-        numerator = ((y_hat - y)**2).sum()
-        value = 1 - (numerator / denominator)
-        return float(value)
-    
-    @staticmethod
-    def RMSE(y_hat, y):
-        """计算一个batch的RMSE (Root Mean Square Error)
-        Parameters:
-         - y_hat: (batch_size, seq_len)
-         - y: (batch_size, seq_len)
-        """
-        mask = ~torch.isnan(y)
-        y = y[mask]             # (batch_size * seq_len)
-        y_hat = y_hat[mask]
-
-        value = torch.sqrt(((y - y_hat)**2).mean())
-        return float(value)
-    
-    @staticmethod
-    def MAE(y_hat, y):
-        """计算一个batch的MAE (Mean Absolute Error)
-        Parameters:
-         - y_hat: (batch_size, seq_len)
-         - y: (batch_size, seq_len)
-        """
-        mask = ~torch.isnan(y)
-        y = y[mask]             # (batch_size * seq_len)
-        y_hat = y_hat[mask]
-
-        value = (y - y_hat).abs().mean()
-        return float(value)
-    
-    @staticmethod
-    def Bias(y_hat, y):
-        """计算一个batch的Bias (Mean Bias Error)
-        Parameters:
-         - y_hat: (batch_size, seq_len)
-         - y: (batch_size, seq_len)
-        """
-        mask = ~torch.isnan(y)
-        y = y[mask]             # (batch_size * seq_len)
-        y_hat = y_hat[mask]
-
-        denominator = y.sum()
-        numerator = (y_hat - y).sum()
-        value = numerator / denominator
-        return float(value)
+def init_weights(model):
+    for m in model.modules():
+        if isinstance(m, nn.Linear):
+            nn.init.xavier_uniform_(m.weight)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+        elif isinstance(m, nn.LSTM):
+            for name, param in m.named_parameters():
+                if "weight_ih" in name:
+                    nn.init.kaiming_normal_(param, mode="fan_in", nonlinearity="relu")
+                elif "weight_hh" in name:
+                    nn.init.orthogonal_(param)
+                elif "bias" in name:
+                    nn.init.zeros_(param)
 
 if __name__ == '__main__':
     model = MyModel(dynamic_input_dim=12,

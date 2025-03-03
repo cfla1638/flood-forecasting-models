@@ -1,9 +1,10 @@
-from model import HybirdModel
+from model import MyModel, init_weights
 from hourly_data import DataInterface
 from tqdm import tqdm
 from pathlib import Path
 from args import Args
 from loguru import logger
+from metrics import NSE, RMSE, MAE, Bias
 
 import os
 import sys
@@ -14,7 +15,7 @@ def setup_logger():
     # 设置logger
     logger.remove()
     logger.add(sys.stdout, level="INFO", format="{message}")
-    logger.add("./log/log{time}.log", level="INFO", rotation="20 MB")
+    logger.add("./log/log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
 
 class TrainInterface(object):
     def __init__(self, opts) -> None:
@@ -37,12 +38,12 @@ class TrainInterface(object):
 
         num_batch = 0.0
         losssum = 0.0
-        for batch in tqdm(train_loader, desc=f'epoch {epoch}'):
+        for batch in tqdm(train_loader, desc=f'Epoch {epoch}'):
             # 在加载数据时将数据转移到Device上
-            x = batch['x'].to(device)
+            x_d = batch['x_d'].to(device)
             y = batch['y'].to(device)
 
-            y_hat = model(x)
+            y_hat = model(x_d)
             loss = criterion(y_hat, y)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0) # 梯度裁剪
@@ -73,14 +74,14 @@ class TrainInterface(object):
         with torch.no_grad():
             for batch in tqdm(val_loader, desc=f'validating'):
                 # 在加载数据时将数据转移到Device上
-                x = batch['x'].to(device)
+                x_d = batch['x_d'].to(device)
                 y = batch['y'].to(device)
 
-                y_hat = model(x)
-                avg_NSE += HybirdModel.NSE(y_hat, y)
-                avg_RMSE += HybirdModel.RMSE(y_hat, y)
-                avg_MAE += HybirdModel.MAE(y_hat, y)
-                avg_Bias += HybirdModel.Bias(y_hat, y)
+                y_hat = model(x_d)
+                avg_NSE += NSE(y_hat, y)
+                avg_RMSE += RMSE(y_hat, y)
+                avg_MAE += MAE(y_hat, y)
+                avg_Bias += Bias(y_hat, y)
                 num_batch += 1
         logger.info(f'Average NSE: {avg_NSE / num_batch: .4f} | Average RMSE: {avg_RMSE / num_batch: .4f} | Average MAE: {avg_MAE / num_batch: .4f} | Average Bias: {avg_Bias / num_batch: .4f}')
 
@@ -107,11 +108,13 @@ class TrainInterface(object):
             os.mkdir(opts.checkpoints_dir)
             logger.info(f'Create checkpoints dir {opts.checkpoints_dir}')
         
-        data_interface = DataInterface()
-        train_loader = data_interface.get_data_loader(opts.train_start_time, opts.train_end_time, opts.batch_size)
-        val_loader = data_interface.get_data_loader(opts.val_start_time, opts.val_end_time, opts.batch_size)
+        data_interface = DataInterface(opts.basins_list)
+        train_loader = data_interface.get_data_loader(opts.train_start_time, opts.train_end_time, opts.batch_size, num_workers=opts.num_workers)
+        val_loader = data_interface.get_data_loader(opts.val_start_time, opts.val_end_time, opts.batch_size, num_workers=opts.num_workers)
 
-        model = HybirdModel(dynamic_input_dim=12, num_timestep=8, lead_time=6)
+        model = MyModel(12, num_timestep=8, lead_time=6)
+        model.apply(init_weights)
+        logger.info('Model initialized.')
 
         # 检查是否要加载预训练的模型
         if opts.pretrain is not None:
@@ -130,13 +133,13 @@ class TrainInterface(object):
         for epoch in range(opts.start_epoch, opts.epoch + 1):
             self._train_epoch(model, train_loader, optimizer, Loss, epoch, device)
 
-            # 检查是否需要验证
-            if opts.val_freq is not None and epoch % opts.val_freq == 0:
-                self._validate(model, val_loader, device)
-
             # 每save_freq保存一次模型, 训练的最后一个epoch也需要保存模型
             if epoch % opts.save_freq == 0 or epoch == opts.epoch:
                 self._save_model(model, epoch, opts.checkpoints_dir)
+
+            # 检查是否需要验证
+            if opts.val_freq is not None and epoch % opts.val_freq == 0:
+                self._validate(model, val_loader, device)
 
 if __name__ == '__main__':
     args = Args()
@@ -145,7 +148,7 @@ if __name__ == '__main__':
     train_interface = TrainInterface(args.get_opts())
     train_interface.main()
 
-# python train.py --batch_size=256 --train_start_time=1999-10-01T00 --train_end_time=2004-10-01T00 --epoch=50 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --val_start_time=1996-10-01T00 --val_end_time=1998-10-01T00
-# python train.py --batch_size=256 --train_start_date=1999-10-01 --train_end_date=2002-09-30 --epoch=20 --save_freq=5 --use_GPU --GPU_id=0 --val_freq=5 --pretrain=./checkpoints/epoch10.tar --val_start_date=1995-10-01 --val_end_date=1997-09-30 --start_epoch=11
+# python train.py --batch_size=256 --train_start_time=1997-10-01T00 --train_end_time=2007-09-30T00 --epoch=50 --save_freq=1 --use_GPU --GPU_id=0 --val_freq=3 --val_start_time=2007-10-01T00 --val_end_time=2009-09-30T00 --num_workers=8 --basins_list=32_basin_list.txt --pretrain=./checkpoints/epoch3.pth --start_epoch=4
+# python train.py --batch_size=256 --train_start_time=1999-10-01T00 --train_end_time=2004-10-01T00 --epoch=50 --save_freq=3 --use_GPU --GPU_id=0 --val_freq=3 --pretrain=./checkpoints/epoch10.pth --val_start_time=2005-10-01T00 --val_end_time=2007-10-01T00 --start_epoch=11
 
 # scp -rP 54212 ./data/CAMELS_US/hourly/ root@connect.yza1.seetacloud.com:/root/autodl-tmp

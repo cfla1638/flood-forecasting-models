@@ -24,7 +24,7 @@ basin_list_path = Path('../data/basin_list/516_basins_hourly.txt')
 basin_list = load_basin_list(basin_list_path)
 
 # 打乱流域列表
-# np.random.seed(8010)
+np.random.seed(8014)
 np.random.shuffle(basin_list)
 
 # 保存20个流域为训练集，10个流域为验证集，10个流域为测试集, 保存到文件中，每行一个流域

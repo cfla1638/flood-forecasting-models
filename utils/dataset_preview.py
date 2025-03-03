@@ -118,6 +118,6 @@ if __name__ == '__main__':
     # visualize_variable(dataset, '02472000', '1979-01-01T13', '2019-03-14T12', 'qobs_mm_per_hour')
     # print(get_dates_with_data(dataset, '02469800'))
 
-    periods = get_periods_with_majority_data(dataset, variable_name='qobs_mm_per_hour', threshold_ratio=0.9)
+    periods = get_periods_with_majority_data(dataset, variable_name='qobs_mm_per_hour', threshold_ratio=0.7)
     for start, end in periods:
         print(f"开始时间: {start}, 结束时间: {end}")

@@ -35,10 +35,11 @@ class TestInterface(object):
             avg_MAE = 0.0
             avg_Bias = 0.0
             for batch in tqdm(loader, desc='Testing'):
-                x = batch['x'].to(device)
+                x_d = batch['x_d'].to(device)
+                x_s = batch['x_s'].to(device)
                 y = batch['y'].to(device)
 
-                y_hat = model(x)
+                y_hat = model(x_d, x_s)
                 avg_NSE += NSE(y_hat, y)
                 avg_RMSE += RMSE(y_hat, y)
                 avg_MAE += MAE(y_hat, y)
@@ -56,14 +57,16 @@ class TestInterface(object):
         Biases = []
         y_hat_list = []
         y_list = []
-        for basin, loader in datahub:
+
+        total_iter_cnt = len(datahub.basin_list)
+        for cur, (basin, loader) in enumerate(datahub):
             with torch.no_grad():
                 num_batch = 0.0
                 avg_NSE = 0.0
                 avg_RMSE = 0.0
                 avg_MAE = 0.0
                 avg_Bias = 0.0
-                for batch in tqdm(loader, desc=f'Testing {basin}'):
+                for batch in tqdm(loader, desc=f'Testing {basin} [{cur + 1}/{total_iter_cnt}]'):
                     x_d = batch['x_d'].to(device)
                     x_s = batch['x_s'].to(device)
                     y = batch['y'].to(device)
@@ -115,7 +118,6 @@ class TestInterface(object):
                 
                 y_hat = model(x_d, x_s)
 
-                y_hat = model(x_d, x_s)
                 avg_NSE += NSE(y_hat, y, datahub.basins_mean[basin])
                 avg_RMSE += RMSE(y_hat, y)
                 avg_MAE += MAE(y_hat, y)
@@ -171,3 +173,5 @@ if __name__ == '__main__':
     setup_logger()
     test_interface = TestInterface(args.get_opts())
     test_interface.main()
+
+# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2005-10-01T00 --end_time=2007-09-30T00 --model_path=./checkpoints/epoch9.pth --basins_list=32_basin_list.txt --test_basin_by_basin

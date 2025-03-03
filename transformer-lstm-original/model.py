@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple, Union
 from torchinfo import summary
 from loguru import logger
 
-class HybirdModel(nn.Module):
+class MyModel(nn.Module):
     def __init__(self, dynamic_input_dim: int, num_timestep: int, lead_time: int, dropout=0.1) -> None:
         super().__init__()
         self.dynamic_embd_dim = 32          # 输入序列数据的维度
@@ -37,9 +37,9 @@ class HybirdModel(nn.Module):
         # 对应论文中的Weight Layer
         self.weight_layer_1 = nn.Sequential(
             nn.Linear(self.lstm_hidden_dim, self.lstm_hidden_dim),
-            nn.ReLU(),
+            nn.LeakyReLU(negative_slope=0.1),
             nn.Linear(self.lstm_hidden_dim, self.lstm_hidden_dim),
-            nn.ReLU()
+            nn.LeakyReLU(negative_slope=0.1)
         )
 
         # Weight的残差连接的Layer Normalization
@@ -57,7 +57,7 @@ class HybirdModel(nn.Module):
         # 卷积池化后的全连接层
         self.dense = nn.Sequential(
             nn.Linear(self.lstm_hidden_dim, self.global_embd_dim),
-            nn.ReLU(),
+            nn.LeakyReLU(negative_slope=0.1),
             nn.Linear(self.global_embd_dim, self.global_embd_dim),
         )
 
@@ -65,7 +65,7 @@ class HybirdModel(nn.Module):
         self.pred_net = nn.Sequential(
             nn.Linear((self.lstm_hidden_dim + self.global_embd_dim) * self.num_timestep, 
                       self.lead_time),
-            nn.ReLU(),
+            nn.LeakyReLU(negative_slope=0.1),
             nn.Linear(self.lead_time, self.lead_time),
         )
 
@@ -94,88 +94,34 @@ class HybirdModel(nn.Module):
         x = torch.concat((x.expand(-1, self.num_timestep,-1), lstm_output), dim=2)
 
         return self.pred_net(x.flatten(1))
-    
-    @staticmethod
-    def NSE(y_hat, y):
-        """计算一个 batch 的 NSE (Nash-Sutcliffe model efficiency coefficient)，
-        自动忽略 y 全相同的样本，以避免数值不稳定。
-        
-        Parameters:
-         - y_hat: (batch_size, seq_len)
-         - y: (batch_size, seq_len)
-        """
-        mask = ~torch.isnan(y)
-        y_hat = y_hat[mask]
-        y = y[mask]
-        
-        eps = 1e-8  # 避免数值问题
-        mean_y = torch.mean(y)
-        denominator = ((y - mean_y) ** 2).sum()
-        
-        # 只计算有效 NSE
-        if denominator < eps:
-            return 0  # 返回 NaN 以指示无效值
-        
-        numerator = ((y_hat - y) ** 2).sum()
-        value = 1 - (numerator / (denominator + eps))
-        
-        return float(value)
 
-    
-    @staticmethod
-    def RMSE(y_hat, y):
-        """计算一个batch的RMSE (Root Mean Square Error)
-        Parameters:
-         - y_hat: (batch_size, seq_len)
-         - y: (batch_size, seq_len)
-        """
-        mask = ~torch.isnan(y)
-        y = y[mask]             # (batch_size * seq_len)
-        y_hat = y_hat[mask]
-
-        value = torch.sqrt(((y - y_hat)**2).mean())
-        return float(value)
-    
-    @staticmethod
-    def MAE(y_hat, y):
-        """计算一个batch的MAE (Mean Absolute Error)
-        Parameters:
-         - y_hat: (batch_size, seq_len)
-         - y: (batch_size, seq_len)
-        """
-        mask = ~torch.isnan(y)
-        y = y[mask]             # (batch_size * seq_len)
-        y_hat = y_hat[mask]
-
-        value = (y - y_hat).abs().mean()
-        return float(value)
-    
-    @staticmethod
-    def Bias(y_hat, y):
-        """计算一个batch的Bias (Mean Bias Error)
-        Parameters:
-         - y_hat: (batch_size, seq_len)
-         - y: (batch_size, seq_len)
-        """
-        mask = ~torch.isnan(y)
-        y = y[mask]             # (batch_size * seq_len)
-        y_hat = y_hat[mask]
-
-        denominator = y.sum()
-        numerator = (y_hat - y).sum()
-        value = numerator / denominator
-        return float(value)
+def init_weights(model):
+    for m in model.modules():
+        if isinstance(m, nn.Linear):
+            nn.init.xavier_uniform_(m.weight)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+        elif isinstance(m, nn.Conv1d):
+            nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+        elif isinstance(m, nn.LSTM):
+            for name, param in m.named_parameters():
+                if "weight_ih" in name:
+                    nn.init.kaiming_normal_(param, mode="fan_in", nonlinearity="relu")
+                elif "weight_hh" in name:
+                    nn.init.orthogonal_(param)
+                elif "bias" in name:
+                    nn.init.zeros_(param)
+        elif isinstance(m, nn.MultiheadAttention):
+            for name, param in m.named_parameters():
+                if "weight" in name:
+                    nn.init.xavier_uniform_(param)
+                elif "bias" in name:
+                    nn.init.zeros_(param)
 
 if __name__ == '__main__':
     # model = HybirdModel(dynamic_input_dim=12, num_timestep=8, lead_time=6)
     # x = torch.randn(32, 8, 12)
     # print(model(x).shape)
-
-    y = torch.randn(2, 6)
-    y_hat = torch.randn(2, 6)
-    y[0, 0] = float('nan')
-    # NSE, RMSE, MAE, Bias
-    print(HybirdModel.NSE(y_hat, y))
-    print(HybirdModel.RMSE(y_hat, y))
-    print(HybirdModel.MAE(y_hat, y))
-    print(HybirdModel.Bias(y_hat, y))
+    pass
