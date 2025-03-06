@@ -77,12 +77,12 @@ class MyModel(nn.Module):
     def __init__(self, 
                  dynamic_input_dim: int,    # 输入序列数据的维度
                  static_input_dim: int,     # 输入序列数据的维度
-                 dynamic_embd_dim: int = 128, # 动态数据的embedding维度
+                 dynamic_embd_dim: int = 256, # 动态数据的embedding维度
                  static_embd_dim: int = 128,  # 静态数据的embedding维度
                  num_timestep: int = 8,     # 根据过去几个小时的数据预测
                  lead_time: int = 6,        # 预测未来几个消失的数据
                  num_head: int = 8,         # 多头注意力的头数
-                 encoder_layers: int = 3,   # 编码器的层数
+                 encoder_layers: int = 2,   # 编码器的层数
                  dropout=0.1) -> None:
         super().__init__()
 
@@ -102,22 +102,20 @@ class MyModel(nn.Module):
             nn.Linear(static_embd_dim, static_embd_dim)
         )
 
-        # GRU
-        self.gru = nn.GRU(input_size=dynamic_embd_dim, hidden_size=dynamic_embd_dim, num_layers=2, batch_first=True, dropout=0.2)
+        # LSTM
+        self.lstm = nn.LSTM(input_size=dynamic_embd_dim, hidden_size=dynamic_embd_dim, batch_first=True)
 
         # Encoder Layers
         self.encoder_layers = nn.ModuleList([
             EncoderBlock(dim=dynamic_embd_dim, num_head=num_head, dropout=dropout) for _ in range(encoder_layers)
         ])
 
-        # TemporalFiLM Layers
-        self.temporal_film_layers = nn.ModuleList([
-            TemporalFiLM(dynamic_embd_dim, static_embd_dim, num_timestep) for _ in range(encoder_layers)
-        ])
+        # TemporalFiLM Layer
+        self.temporal_film = TemporalFiLM(dynamic_embd_dim, static_embd_dim, num_timestep)
 
         # Output Layer
         self.output_layer = nn.Sequential(
-            nn.Linear(dynamic_embd_dim * num_timestep, 64),
+            nn.Linear(dynamic_embd_dim * num_timestep * 2, 64),
             nn.LeakyReLU(negative_slope=0.1),
             nn.Linear(64, lead_time)
         )
@@ -133,16 +131,18 @@ class MyModel(nn.Module):
         x_d = self.dynamic_embd_net(x_d)    # (batch_size, seq_len, dynamic_embd_dim)
         x_s = self.static_embd_net(x_s)     # (batch_size, static_embd_dim)
 
-        # GRU
-        x_d, _ = self.gru(x_d)              # (batch_size, seq_len, dynamic_embd_dim)
+        # LSTM
+        x_d, _ = self.lstm(x_d)              # (batch_size, seq_len, dynamic_embd_dim)
+        x_d = self.temporal_film(x_d, x_s)  # (batch_size, seq_len, dynamic_embd_dim)
 
-        # Encoder & TemporalFiLM Layers
-        for encoder, film in zip(self.encoder_layers, self.temporal_film_layers):
-            x_d = encoder(x_d)              # (batch_size, seq_len, dynamic_embd_dim)
-            x_d = film(x_d, x_s)            # (batch_size, seq_len, dynamic_embd_dim)
+        # Encoder Layers
+        encoder_output = x_d
+        for encoder in self.encoder_layers:
+            encoder_output = encoder(encoder_output)    # (batch_size, seq_len, dynamic_embd_dim)
 
-        # Output Layer
-        return self.output_layer(x_d.flatten(1))       # (batch_size, lead_time)
+        x_d = torch.cat([x_d, encoder_output], dim=-1)  # (batch_size, seq_len, dynamic_embd_dim * 2)
+
+        return self.output_layer(x_d.flatten(1))    # (batch_size, lead_time)
     
 def init_weights(model):
     for m in model.modules():
@@ -154,7 +154,7 @@ def init_weights(model):
             nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
             if m.bias is not None:
                 nn.init.zeros_(m.bias)
-        elif isinstance(m, nn.GRU):
+        elif isinstance(m, nn.LSTM):
             for name, param in m.named_parameters():
                 if "weight_ih" in name:
                     nn.init.kaiming_normal_(param, mode="fan_in", nonlinearity="relu")
@@ -170,9 +170,10 @@ def init_weights(model):
                     nn.init.zeros_(param)
 
 if __name__ == '__main__':
-    x_d = torch.randn(32, 8, 12)
-    x_s = torch.randn(32, 27)
+    # x_d = torch.randn(32, 8, 12)
+    # x_s = torch.randn(32, 27)
     model = MyModel(12, 27)
     model.apply(init_weights)
-    y = model(x_d, x_s)
-    print(y.shape)
+    # y = model(x_d, x_s)
+    # print(y.shape)
+    summary(model, input_size=[(32, 8, 12), (32, 27)], device='cpu')

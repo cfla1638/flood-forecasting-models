@@ -81,7 +81,7 @@ def draw_with_metric(basin_list, metric):
 
     # 颜色映射
     cmap = plt.cm.coolwarm  # 选用颜色映射
-    norm = plt.Normalize(vmin=metric_values.min(), vmax=metric_values.max())
+    norm = plt.Normalize(vmin=-1, vmax=1)
     colors = cmap(norm(metric_values))
 
     # 创建绘图

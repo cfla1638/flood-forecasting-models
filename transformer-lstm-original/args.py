@@ -21,7 +21,9 @@ class Args(object):
         self.parser.add_argument("--val_end_time", type=str, default='1999-10-01T00', help="Validating end time")
         self.parser.add_argument("--val_freq", type=int, default=None, help='Validating model frequency (per n epoch)')
         self.parser.add_argument("--num_workers", type=int, default=8, help="number of workers for dataloader")
-        self.parser.add_argument("--basins_list", type=str, default=None, help="Basins list for training")
+        self.parser.add_argument("--basin_list", type=str, default=None, help="Basins list for training")
+        
+        self.parser.add_argument("--validate", action="store_true", help="identify whether to validate")
         self.opts = self.parser.parse_args()
 
     def set_test_args(self):

@@ -15,7 +15,7 @@ import torch
 def setup_logger():
     # 设置logger
     logger.remove()
-    logger.add(sys.stdout, level="INFO", format="{message}")
+    logger.add(sys.stdout, level="INFO", format="<green>{time:HH:mm:ss}</green> | <level>{message}</level>")
     # logger.add("./log/log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
 
 class TestInterface(object):

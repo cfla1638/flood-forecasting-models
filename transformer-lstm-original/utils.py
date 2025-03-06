@@ -170,10 +170,6 @@ if __name__ == '__main__':
 
     # # 绘制
     # plot_predictions(y_true, y_pred, scatter_color='blue')
-
-    b1 = '../data/basin_list/32_basin_list.txt'
-    b1 = load_basin_list(Path(b1))
-    b2 = '../utils/32_basin_list.txt'
-    b2 = load_basin_list(Path(b2))
-    # 检查两个列表是否有重复
-    print(set(b1) & set(b2))
+    basin_list = '../data/basin_list/30_basin_list_evenly.txt'
+    basin_list = load_basin_list(Path(basin_list))
+    draw_basins(basin_list)

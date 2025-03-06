@@ -2,7 +2,7 @@ from model import MyModel
 from hourly_data import DataInterface
 from tqdm import tqdm
 from loguru import logger
-from utils import draw_with_metric
+from utils import draw_with_metric, plot_predictions
 from args import Args
 from metrics import NSE, RMSE, MAE, Bias
 
@@ -15,37 +15,12 @@ import torch
 def setup_logger():
     # 设置logger
     logger.remove()
-    logger.add(sys.stdout, level="INFO", format="{message}")
+    logger.add(sys.stdout, level="INFO", format="<green>{time:HH:mm:ss}</green> | <level>{message}</level>")
     # logger.add("./log/log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
 
 class TestInterface(object):
     def __init__(self, opts) -> None:
         self.opts = opts
-
-    @staticmethod
-    def _test_for_all_basins(model, datahub, start_time, end_time, batch_size, num_workers, device='cuda:0'):
-        logger.info('Testing for all basins')
-        
-        loader = datahub.get_data_loader(start_time, end_time, batch_size=batch_size, num_workers=num_workers)
-        # 在所有的流域上进行测试
-        with torch.no_grad():
-            num_batch = 0.0
-            avg_NSE = 0.0
-            avg_RMSE = 0.0
-            avg_MAE = 0.0
-            avg_Bias = 0.0
-            for batch in tqdm(loader, desc='Testing'):
-                x_d = batch['x_d'].to(device)
-                x_s = batch['x_s'].to(device)
-                y = batch['y'].to(device)
-
-                y_hat = model(x_d, x_s)
-                avg_NSE += NSE(y_hat, y)
-                avg_RMSE += RMSE(y_hat, y)
-                avg_MAE += MAE(y_hat, y)
-                avg_Bias += Bias(y_hat, y)
-                num_batch += 1
-            logger.info(f'Average NSE: {avg_NSE / num_batch: .4f} | Average RMSE: {avg_RMSE / num_batch: .4f} | Average MAE: {avg_MAE / num_batch: .4f} | Average Bias: {avg_Bias / num_batch: .4f}')
 
     @staticmethod
     def _test_basin_by_basin(model, datahub, device='cuda:0'):
@@ -87,7 +62,13 @@ class TestInterface(object):
                 RMSEs.append(avg_RMSE / num_batch)
                 MAEs.append(avg_MAE / num_batch)
                 Biases.append(avg_Bias / num_batch)
+        
+        NSEs = np.array(NSEs)
+        NSEs[NSEs < -1] = -1
+        logger.info(f'Average NSE: {np.mean(NSEs): .4f} | Average RMSE: {np.mean(RMSEs): .4f} | Average MAE: {np.mean(MAEs): .4f} | Average Bias: {np.mean(Biases): .4f}')
+
         draw_with_metric(datahub.basin_list, NSEs)
+        plot_predictions(np.concatenate(y_list, axis=0).reshape(-1), np.concatenate(y_hat_list, axis=0).reshape(-1))
 
     @staticmethod
     def _test_for_single_basin(model, datahub, basin, device='cuda:0'):
@@ -140,6 +121,9 @@ class TestInterface(object):
         plt.legend()
         plt.show()
 
+        # 绘制预测值与实际值的散点图
+        plot_predictions(y_true, y_pred)
+
     def main(self):
         opts = self.opts
 
@@ -156,10 +140,7 @@ class TestInterface(object):
         model.eval()
         model.to(device)
 
-        datahub = DataInterface(self.opts.basins_list, self.opts.start_time, self.opts.end_time, default_batch_size=opts.batch_size, default_num_workers=opts.num_workers)
-
-        if opts.test_for_all_basins:
-            self._test_for_all_basins(model, datahub, self.opts.start_time, self.opts.end_time, opts.batch_size, opts.num_workers, device=device)
+        datahub = DataInterface(self.opts.basin_list, self.opts.start_time, self.opts.end_time, default_batch_size=opts.batch_size, default_num_workers=opts.num_workers)
 
         if opts.test_basin_by_basin:
             self._test_basin_by_basin(model, datahub, device=device)
@@ -174,4 +155,4 @@ if __name__ == '__main__':
     test_interface = TestInterface(args.get_opts())
     test_interface.main()
 
-# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2005-10-01T00 --end_time=2007-09-30T00 --model_path=./checkpoints/epoch9.pth --basins_list=32_basin_list.txt --test_basin_by_basin
+# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch7.pth --basin_list=32_basin_list.txt --test_basin_by_basin

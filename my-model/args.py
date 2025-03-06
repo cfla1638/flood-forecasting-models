@@ -21,7 +21,9 @@ class Args(object):
         self.parser.add_argument("--val_end_time", type=str, default='1999-10-01T00', help="Validating end time")
         self.parser.add_argument("--val_freq", type=int, default=None, help='Validating model frequency (per n epoch)')
         self.parser.add_argument("--num_workers", type=int, default=8, help="number of workers for dataloader")
-        self.parser.add_argument("--basins_list", type=str, default=None, help="Basins list for training")
+        self.parser.add_argument("--basin_list", type=str, default=None, help="Basins list for training")
+
+        self.parser.add_argument("--validate", action="store_true", help="identify whether to validate")
         self.opts = self.parser.parse_args()
 
     def set_test_args(self):
@@ -31,17 +33,14 @@ class Args(object):
         self.parser.add_argument("--num_workers", type=int, default=8, help="number of workers for dataloader")
 
         self.parser.add_argument("--model_path", type=str, default='./checkpoints/epoch9.pth', help="model path")
-        self.parser.add_argument("--basins_list", type=str, default='32_basin_list.txt', help="Basin list for testing")
+        self.parser.add_argument("--basin_list", type=str, default='32_basin_list.txt', help="Basin list for testing")
         self.parser.add_argument("--start_time", type=str, default='2005-10-01T00', help="Testing start time")
         self.parser.add_argument("--end_time", type=str, default='2007-09-30T00', help="Testing end time")
-
-        # 模式1: 测试所有流域
-        self.parser.add_argument("--test_for_all_basins", action="store_true", default=False, help="Test for all basins")
         
-        # 模式2: 逐个测试单个流域
+        # 模式1: 逐个测试单个流域
         self.parser.add_argument("--test_basin_by_basin", action="store_true", default=False, help="Test basin by basin")
 
-        # 模式3: 测试单个流域
+        # 模式2: 测试单个流域
         self.parser.add_argument("--test_for_single_basin", action="store_true", default=False, help="Test for single basin")
         self.parser.add_argument("--gauge_id", type=str, help="Gauge id for testing")
 

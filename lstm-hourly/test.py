@@ -15,7 +15,7 @@ import torch
 def setup_logger():
     # 设置logger
     logger.remove()
-    logger.add(sys.stdout, level="INFO", format="{message}")
+    logger.add(sys.stdout, level="INFO", format="<green>{time:HH:mm:ss}</green> | <level>{message}</level>")
     # logger.add("./log/log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
 
 class TestInterface(object):
@@ -141,7 +141,7 @@ class TestInterface(object):
     def main(self):
         opts = self.opts
 
-        model = MyModel(12, num_timestep=8, lead_time=6)
+        model = MyModel(11, 27, 256)
         model.load_state_dict(torch.load(self.opts.model_path, weights_only=True))
         logger.info(f'Model loaded from {self.opts.model_path}')
 
@@ -170,9 +170,9 @@ if __name__ == '__main__':
     test_interface.main()
 
 # Generalization in time
-# python -u test.py --use_GPU --GPU_id=0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch3.pth --basin_list=32_basin_list.txt --test_basin_by_basin
+# python -u test.py --use_GPU --GPU_id=0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch4.pth --basin_list=32_basin_list.txt --test_basin_by_basin
 
 # Generalization in space
-# python -u test.py --use_GPU --GPU_id=0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch3.pth --basin_list=32_basin_list_test.txt --test_basin_by_basin
+# python -u test.py --use_GPU --GPU_id=0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch4.pth --basin_list=32_basin_list_test.txt --test_basin_by_basin
 
 # python -u test.py --use_GPU --GPU_id=0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch3.pth --basin_list=32_basin_list.txt --test_for_single_basin --gauge_id=03026500
