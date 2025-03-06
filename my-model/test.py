@@ -16,7 +16,7 @@ def setup_logger():
     # 设置logger
     logger.remove()
     logger.add(sys.stdout, level="INFO", format="<green>{time:HH:mm:ss}</green> | <level>{message}</level>")
-    # logger.add("./log/log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
+    logger.add("./log/test_log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
 
 class TestInterface(object):
     def __init__(self, opts) -> None:
@@ -140,7 +140,7 @@ class TestInterface(object):
         model.eval()
         model.to(device)
 
-        datahub = DataInterface(self.opts.basin_list, self.opts.start_time, self.opts.end_time, default_batch_size=opts.batch_size, default_num_workers=opts.num_workers)
+        datahub = DataInterface(self.opts.basin_list, self.opts.start_time, self.opts.end_time, default_batch_size=opts.batch_size, default_num_workers=opts.num_workers, dynamic_meanstd=opts.dynamic_meanstd, static_meanstd=opts.static_meanstd)
 
         if opts.test_basin_by_basin:
             self._test_basin_by_basin(model, datahub, device=device)

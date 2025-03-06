@@ -1,0 +1,52 @@
+2025-03-06 16:29:05 | INFO | Using basin list: 30_basin_list_evenly.txt
+2025-03-06 16:29:05 | INFO | Loading dynamic data...
+2025-03-06 16:29:05 | INFO | Dynamic data loaded.
+2025-03-06 16:29:05 | INFO | Loaded dynamic data for 30 basins.
+2025-03-06 16:29:05 | INFO | processing dynamic data...
+2025-03-06 16:29:12 | INFO | Dynamic mean and std saved to ..\data\meanstd\hourly\dynamic_30_basin_list_evenly.csv
+2025-03-06 16:29:12 | INFO | Dynamic data processed.
+2025-03-06 16:29:12 | INFO | Loading static attributes...
+2025-03-06 16:29:12 | INFO | Static attributes loaded for 30 basins.
+2025-03-06 16:29:12 | INFO | Static attributes loaded.
+2025-03-06 16:29:12 | INFO | Processing static attributes...
+2025-03-06 16:29:12 | INFO | Static mean and std saved to ..\data\meanstd\hourly\static_30_basin_list_evenly.csv
+2025-03-06 16:29:12 | INFO | Static attributes processed.
+2025-03-06 16:29:12 | INFO | Model initialized.
+2025-03-06 16:29:14 | INFO | Train on cuda:0
+2025-03-06 16:29:14 | INFO | Start training.
+2025-03-06 16:44:40 | INFO | Epoch 1 | average loss =  0.1115
+2025-03-06 16:44:40 | INFO | Model epoch1.pth saved.
+2025-03-06 16:44:40 | INFO | Start validating.
+2025-03-06 16:48:32 | INFO | Average NSE:  0.9645 | Average RMSE:  0.1764 | Average MAE:  0.0446 | Average Bias:  0.0377
+2025-03-06 17:05:45 | INFO | Epoch 2 | average loss =  0.0845
+2025-03-06 17:05:45 | INFO | Model epoch2.pth saved.
+2025-03-06 17:05:45 | INFO | Start validating.
+2025-03-06 17:09:29 | INFO | Average NSE:  0.9653 | Average RMSE:  0.1701 | Average MAE:  0.0419 | Average Bias: -0.0612
+2025-03-06 17:25:13 | INFO | Epoch 3 | average loss =  0.0801
+2025-03-06 17:25:13 | INFO | Model epoch3.pth saved.
+2025-03-06 17:25:13 | INFO | Start validating.
+2025-03-06 17:28:52 | INFO | Average NSE:  0.9680 | Average RMSE:  0.1629 | Average MAE:  0.0443 | Average Bias:  0.2602
+2025-03-06 17:44:26 | INFO | Epoch 4 | average loss =  0.0768
+2025-03-06 17:44:26 | INFO | Model epoch4.pth saved.
+2025-03-06 17:44:26 | INFO | Start validating.
+2025-03-06 17:48:08 | INFO | Average NSE:  0.9694 | Average RMSE:  0.1565 | Average MAE:  0.0449 | Average Bias: -0.1067
+2025-03-06 18:03:37 | INFO | Epoch 5 | average loss =  0.0747
+2025-03-06 18:03:37 | INFO | Model epoch5.pth saved.
+2025-03-06 18:03:37 | INFO | Start validating.
+2025-03-06 18:07:23 | INFO | Average NSE:  0.9671 | Average RMSE:  0.1653 | Average MAE:  0.0422 | Average Bias: -0.3872
+2025-03-06 18:22:53 | INFO | Epoch 6 | average loss =  0.0740
+2025-03-06 18:22:53 | INFO | Model epoch6.pth saved.
+2025-03-06 18:22:53 | INFO | Start validating.
+2025-03-06 18:26:38 | INFO | Average NSE:  0.9702 | Average RMSE:  0.1584 | Average MAE:  0.0429 | Average Bias: -0.1203
+2025-03-06 18:42:10 | INFO | Epoch 7 | average loss =  0.0721
+2025-03-06 18:42:10 | INFO | Model epoch7.pth saved.
+2025-03-06 18:42:10 | INFO | Start validating.
+2025-03-06 18:45:58 | INFO | Average NSE:  0.9678 | Average RMSE:  0.1680 | Average MAE:  0.0579 | Average Bias: -0.4751
+2025-03-06 19:01:42 | INFO | Epoch 8 | average loss =  0.0722
+2025-03-06 19:01:42 | INFO | Model epoch8.pth saved.
+2025-03-06 19:01:42 | INFO | Start validating.
+2025-03-06 19:05:32 | INFO | Average NSE:  0.9696 | Average RMSE:  0.1599 | Average MAE:  0.0584 | Average Bias:  6.8459
+2025-03-06 19:21:23 | INFO | Epoch 9 | average loss =  0.0711
+2025-03-06 19:21:23 | INFO | Model epoch9.pth saved.
+2025-03-06 19:21:23 | INFO | Start validating.
+2025-03-06 19:25:08 | INFO | Average NSE:  0.9693 | Average RMSE:  0.1592 | Average MAE:  0.0549 | Average Bias: -1.2300

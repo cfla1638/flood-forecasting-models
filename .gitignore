@@ -5,7 +5,7 @@
 !test/test_data/*.p
 *.swp
 .coverage
-
+.nc
 bug_fix.py
 
 # folder
@@ -17,9 +17,10 @@ neuralhydrology.egg-info/*
 runs/
 configs/*
 .ipynb_checkpoints/
-data/*
 docs/build/*
 __pycache__
 checkpoints
 log
-train_record
+data/CAMELS_US/
+data/config/
+data/meanstd/

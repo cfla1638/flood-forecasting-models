@@ -22,6 +22,8 @@ class Args(object):
         self.parser.add_argument("--val_freq", type=int, default=None, help='Validating model frequency (per n epoch)')
         self.parser.add_argument("--num_workers", type=int, default=8, help="number of workers for dataloader")
         self.parser.add_argument("--basin_list", type=str, default=None, help="Basins list for training")
+        self.parser.add_argument("--dynamic_meanstd", type=str, default=None, help="dynamic meanstd file")
+        self.parser.add_argument("--static_meanstd", type=str, default=None, help="stsatic meanstd file")
 
         self.parser.add_argument("--validate", action="store_true", help="identify whether to validate")
         self.opts = self.parser.parse_args()
@@ -36,6 +38,8 @@ class Args(object):
         self.parser.add_argument("--basin_list", type=str, default='32_basin_list.txt', help="Basin list for testing")
         self.parser.add_argument("--start_time", type=str, default='2005-10-01T00', help="Testing start time")
         self.parser.add_argument("--end_time", type=str, default='2007-09-30T00', help="Testing end time")
+        self.parser.add_argument("--dynamic_meanstd", type=str, default=None, help="dynamic meanstd file")
+        self.parser.add_argument("--static_meanstd", type=str, default=None, help="stsatic meanstd file")
         
         # 模式1: 逐个测试单个流域
         self.parser.add_argument("--test_basin_by_basin", action="store_true", default=False, help="Test basin by basin")

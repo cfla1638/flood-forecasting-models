@@ -1,0 +1,47 @@
+2025-03-06 19:30:48 | INFO | Model loaded from ./checkpoints/epoch6.pth
+2025-03-06 19:30:48 | INFO | Testing on cuda:0
+2025-03-06 19:30:50 | INFO | Using basin list: 30_basin_list_evenly_test.txt
+2025-03-06 19:30:50 | INFO | Loading dynamic data...
+2025-03-06 19:30:50 | INFO | Dynamic data loaded.
+2025-03-06 19:30:50 | INFO | Loaded dynamic data for 30 basins.
+2025-03-06 19:30:50 | INFO | processing dynamic data...
+2025-03-06 19:30:57 | INFO | Using provided mean and std for normalization
+2025-03-06 19:30:58 | INFO | Dynamic data processed.
+2025-03-06 19:30:58 | INFO | Loading static attributes...
+2025-03-06 19:30:58 | INFO | Static attributes loaded for 30 basins.
+2025-03-06 19:30:58 | INFO | Static attributes loaded.
+2025-03-06 19:30:58 | INFO | Processing static attributes...
+2025-03-06 19:30:58 | INFO | Static mean and std saved to ..\data\meanstd\hourly\static_30_basin_list_evenly_test.csv
+2025-03-06 19:30:58 | INFO | Static attributes processed.
+2025-03-06 19:30:58 | INFO | Testing basin by basin
+2025-03-06 19:31:33 | INFO | Average NSE:  0.9179 | Average RMSE:  0.0668 | Average MAE:  0.0344 | Average Bias:  0.0898
+2025-03-06 19:32:02 | INFO | Average NSE:  0.9293 | Average RMSE:  0.0303 | Average MAE:  0.0246 | Average Bias: -0.0400
+2025-03-06 19:32:32 | INFO | Average NSE:  0.8729 | Average RMSE:  0.0589 | Average MAE:  0.0338 | Average Bias: -0.0572
+2025-03-06 19:33:02 | INFO | Average NSE:  0.9624 | Average RMSE:  0.1538 | Average MAE:  0.0482 | Average Bias: -1.6233
+2025-03-06 19:33:32 | INFO | Average NSE:  0.9818 | Average RMSE:  0.0598 | Average MAE:  0.0307 | Average Bias:  0.0329
+2025-03-06 19:34:02 | INFO | Average NSE:  0.8626 | Average RMSE:  0.1945 | Average MAE:  0.0498 | Average Bias:  0.0682
+2025-03-06 19:34:33 | INFO | Average NSE:  0.9783 | Average RMSE:  0.0670 | Average MAE:  0.0307 | Average Bias: -0.0280
+2025-03-06 19:35:04 | INFO | Average NSE:  0.9817 | Average RMSE:  0.1034 | Average MAE:  0.0402 | Average Bias: -0.2524
+2025-03-06 19:35:34 | INFO | Average NSE:  0.9441 | Average RMSE:  0.0625 | Average MAE:  0.0319 | Average Bias: -0.0541
+2025-03-06 19:36:03 | INFO | Average NSE:  0.7818 | Average RMSE:  0.4975 | Average MAE:  0.0745 | Average Bias: -0.1114
+2025-03-06 19:36:34 | INFO | Average NSE:  0.7256 | Average RMSE:  0.0660 | Average MAE:  0.0307 | Average Bias: -0.0515
+2025-03-06 19:37:03 | INFO | Average NSE:  0.9802 | Average RMSE:  0.0296 | Average MAE:  0.0217 | Average Bias: -0.0244
+2025-03-06 19:37:33 | INFO | Average NSE:  0.7806 | Average RMSE:  0.0460 | Average MAE:  0.0337 | Average Bias: -0.0632
+2025-03-06 19:38:01 | INFO | Average NSE:  0.6477 | Average RMSE:  0.2145 | Average MAE:  0.0449 | Average Bias: -0.0411
+2025-03-06 19:38:31 | INFO | Average NSE:  0.9424 | Average RMSE:  0.0684 | Average MAE:  0.0367 | Average Bias: -0.0562
+2025-03-06 19:39:00 | INFO | Average NSE: -0.0199 | Average RMSE:  0.0628 | Average MAE:  0.0566 | Average Bias: -0.1230
+2025-03-06 19:39:29 | INFO | Average NSE:  0.9809 | Average RMSE:  0.1457 | Average MAE:  0.0650 | Average Bias: -0.0530
+2025-03-06 19:39:58 | INFO | Average NSE:  0.9580 | Average RMSE:  0.0436 | Average MAE:  0.0366 | Average Bias: -0.1564
+2025-03-06 19:40:27 | INFO | Average NSE:  0.9544 | Average RMSE:  0.0542 | Average MAE:  0.0323 | Average Bias: -0.0632
+2025-03-06 19:40:57 | INFO | Average NSE:  0.9557 | Average RMSE:  0.0596 | Average MAE:  0.0363 | Average Bias: -0.0762
+2025-03-06 19:41:26 | INFO | Average NSE:  0.8358 | Average RMSE:  0.0408 | Average MAE:  0.0276 | Average Bias:  0.0407
+2025-03-06 19:41:55 | INFO | Average NSE:  0.9587 | Average RMSE:  0.2677 | Average MAE:  0.0850 | Average Bias: -0.2255
+2025-03-06 19:42:25 | INFO | Average NSE:  0.8372 | Average RMSE:  0.5340 | Average MAE:  0.0705 | Average Bias:  0.1229
+2025-03-06 19:42:54 | INFO | Average NSE:  0.9522 | Average RMSE:  0.1312 | Average MAE:  0.0485 | Average Bias: -0.0101
+2025-03-06 19:43:23 | INFO | Average NSE:  0.6797 | Average RMSE:  0.0982 | Average MAE:  0.0290 | Average Bias:  0.0433
+2025-03-06 19:43:52 | INFO | Average NSE:  0.9661 | Average RMSE:  0.1230 | Average MAE:  0.0358 | Average Bias: -1.0251
+2025-03-06 19:44:21 | INFO | Average NSE:  0.9411 | Average RMSE:  0.3610 | Average MAE:  0.1124 | Average Bias: -0.0209
+2025-03-06 19:44:51 | INFO | Average NSE:  0.9837 | Average RMSE:  0.2321 | Average MAE:  0.0876 | Average Bias: -0.0328
+2025-03-06 19:45:20 | INFO | Average NSE:  0.9766 | Average RMSE:  0.1704 | Average MAE:  0.0545 | Average Bias: -0.0148
+2025-03-06 19:45:50 | INFO | Average NSE:  0.9879 | Average RMSE:  0.1942 | Average MAE:  0.0834 | Average Bias: -0.0332
+2025-03-06 19:45:50 | INFO | Average NSE:  0.8746 | Average RMSE:  0.1413 | Average MAE:  0.0476 | Average Bias: -0.1280

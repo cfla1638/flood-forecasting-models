@@ -15,7 +15,7 @@ def setup_logger():
     # 设置logger
     logger.remove()
     logger.add(sys.stdout, level="INFO", format="<green>{time:HH:mm:ss}</green> | <level>{message}</level>")
-    logger.add("./log/log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
+    logger.add("./log/train_log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
 
 class TrainInterface(object):
     def __init__(self, opts) -> None:
@@ -121,7 +121,7 @@ class TrainInterface(object):
             os.mkdir(opts.checkpoints_dir)
             logger.info(f'Create checkpoints dir {opts.checkpoints_dir}')
         
-        data_interface = DataInterface(opts.basin_list)
+        data_interface = DataInterface(opts.basin_list, dynamic_meanstd=opts.dynamic_meanstd, static_meanstd=opts.static_meanstd)
         if not opts.validate:
             train_loader = data_interface.get_data_loader(opts.train_start_time, opts.train_end_time, opts.batch_size, num_workers=opts.num_workers)
         val_loader = data_interface.get_data_loader(opts.val_start_time, opts.val_end_time, opts.batch_size, num_workers=opts.num_workers)

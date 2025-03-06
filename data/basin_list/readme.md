@@ -1,0 +1,6 @@
+ - 516_basins_hourly.txt: 代表一小时为单位的数据集中的所有basin列表
+ - 531_basin_list.txt: 普遍使用的531个流域
+ - huc_671/Region_xx.txt: 代表HUC编号为xx的区域中所有的basin列表, 总数为671, 为原始的CAMELS US数据集包含的671个basin
+ - huc_516/Region_xx.txt: 代表HUC编号为xx的区域中所有的basin列表, 总数为516, 为usgs-streamflow-nldas_hourly.nc中所含的流域
+ - clustered_basins/cluster_xx.txt：代表kmeans聚类后，每个类中有哪些流域
+ - 其余的均为测试用basin列表

@@ -153,7 +153,6 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
     if meanstd is None:
         mean = dataset.mean()
         std = dataset.std()
-        dataset = (dataset - mean) / std
         
         # 保存均值方差
         m = mean.to_pandas().rename('mean')
@@ -254,7 +253,9 @@ class DataInterface(object):
                  default_numstep : int = 336, 
                  default_lead_time : int = 6,
                  default_batch_size : int = 256,
-                 default_num_workers : int = 8
+                 default_num_workers : int = 8,
+                 dynamic_meanstd = None,
+                 static_meanstd = None
                  ) -> None:
         """
         Parameters:
@@ -278,12 +279,10 @@ class DataInterface(object):
         self.default_num_workers = default_num_workers
 
         # 加载标准化数据的均值方差
-        dynamic_meanstd = None
-        static_meanstd = None
-        if settings.dynamic_mean_std is not None:
-            dynamic_meanstd = pd.read_csv(settings.meanstd_dir / settings.dynamic_mean_std, index_col=0)
-        if settings.static_mean_std is not None:
-            static_meanstd = pd.read_csv(settings.meanstd_dir / settings.static_mean_std, index_col=0)
+        if dynamic_meanstd is not None:
+            dynamic_meanstd = pd.read_csv(settings.meanstd_dir / dynamic_meanstd, index_col=0)
+        if static_meanstd is not None:
+            static_meanstd = pd.read_csv(settings.meanstd_dir / static_meanstd, index_col=0)
 
         # 加载数据
         self.basin_list = load_basin_list(settings.basin_list_dir / basins_file)

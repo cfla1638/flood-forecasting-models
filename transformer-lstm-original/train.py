@@ -15,7 +15,7 @@ def setup_logger():
     # 设置logger
     logger.remove()
     logger.add(sys.stdout, level="INFO", format="<green>{time:HH:mm:ss}</green> | <level>{message}</level>")
-    logger.add("./log/log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
+    logger.add("./log/train_log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
 
 class TrainInterface(object):
     def __init__(self, opts) -> None:
@@ -107,7 +107,7 @@ class TrainInterface(object):
             os.mkdir(opts.checkpoints_dir)
             logger.info(f'Create checkpoints dir {opts.checkpoints_dir}')
         
-        data_interface = DataInterface(opts.basin_list)
+        data_interface = DataInterface(opts.basin_list, dynamic_meanstd=opts.dynamic_meanstd, static_meanstd=opts.static_meanstd)
         if not opts.validate:
             train_loader = data_interface.get_data_loader(opts.train_start_time, opts.train_end_time, opts.batch_size, num_workers=opts.num_workers)
         val_loader = data_interface.get_data_loader(opts.val_start_time, opts.val_end_time, opts.batch_size, num_workers=opts.num_workers)
@@ -153,6 +153,6 @@ if __name__ == '__main__':
     train_interface = TrainInterface(args.get_opts())
     train_interface.main() 
 
-# python train.py --batch_size=256 --train_start_time=1997-10-01T00 --train_end_time=2007-09-30T00 --epoch=50 --save_freq=1 --use_GPU --GPU_id=0 --val_freq=1 --val_start_time=2007-10-01T00 --val_end_time=2009-09-30T00 --num_workers=8 --basin_list=32_basin_list.txt --pretrain=./checkpoints/epoch3.pth --start_epoch=4
+# python train.py --batch_size=256 --train_start_time=1997-10-01T00 --train_end_time=2007-09-30T00 --epoch=50 --save_freq=1 --use_GPU --GPU_id=0 --val_freq=1 --val_start_time=2007-10-01T00 --val_end_time=2009-09-30T00 --num_workers=8 --basin_list=30_basin_list_evenly.txt --pretrain=./checkpoints/epoch3.pth --start_epoch=4
 
 # scp -rP 54212 ./data/CAMELS_US/hourly/ root@connect.yza1.seetacloud.com:/root/autodl-tmp

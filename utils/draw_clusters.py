@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import contextily as ctx
 from pathlib import Path
 
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用 SimHei 字体
+plt.rcParams['axes.unicode_minus'] = False   # 解决负号显示问题
+
 def load_basin_list(file_path: Path):
     """读取流域列表"""
     if not file_path.is_file():
@@ -58,9 +61,9 @@ def draw_clusters(output_dir: Path, dataset_path: Path):
 
     # 设置图例和标题
     ax.legend()
-    ax.set_title("Clustered Gauge Station Locations", fontsize=14)
-    ax.set_xlabel("Longitude")
-    ax.set_ylabel("Latitude")
+    ax.set_title("不同类别流域的分布", fontsize=14)
+    ax.set_xlabel("经度")
+    ax.set_ylabel("纬度")
 
     # 移除坐标轴刻度
     ax.set_xticks([])
