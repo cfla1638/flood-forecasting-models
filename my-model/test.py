@@ -155,4 +155,6 @@ if __name__ == '__main__':
     test_interface = TestInterface(args.get_opts())
     test_interface.main()
 
-# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch7.pth --basin_list=32_basin_list.txt --test_basin_by_basin
+# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly.txt --test_basin_by_basin
+
+# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --dynamic_meanstd=dynamic_30_basin_list_evenly.csv --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly_test.txt --test_basin_by_basin

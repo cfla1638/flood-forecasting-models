@@ -19,6 +19,6 @@ def extract_dataset(dataset_path, basins):
     dataset.to_netcdf('dataset.nc')
 
 if __name__ == '__main__':
-    basin_list_path = Path('../data/basin_list/30_basin_list_evenly.txt')
+    basin_list_path = Path('../data/basin_list/30_basin_list_evenly_test.txt')
     dataset_path = Path('../data/CAMELS_US/hourly/usgs-streamflow-nldas_hourly.nc')
     extract_dataset(dataset_path, load_basin_list(basin_list_path)) 
