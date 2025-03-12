@@ -137,10 +137,11 @@ def load_xarray_dataset(dataset_path: Path, basins: List[str],
     """
     logger.info('Loading dynamic data...')
     dataset = xr.open_dataset(dataset_path)
-    logger.info('Dynamic data loaded.')
-    
+    logger.info('Dynamic data loaded from ' + str(dataset_path))
+
     # 取给定basin的数据
     basins = [basin for basin in basins if basin in dataset.coords['basin']]    # 只保留数据集中存在的数据
+    
     dataset = dataset.sel(basin=basins)
     logger.info(f'Loaded dynamic data for {len(basins)} basins.')
 
@@ -251,7 +252,8 @@ class DataInterface(object):
                  default_batch_size : int = 256,
                  default_num_workers : int = 8,
                  dynamic_meanstd = None,
-                 static_meanstd = None
+                 static_meanstd = None,
+                 dataset_path: Path = None
                  ) -> None:
         """
         Parameters:
@@ -266,6 +268,8 @@ class DataInterface(object):
         # 处理默认参数
         if basins_file is None:
             basins_file = settings.basins_file
+        if dataset_path is None:
+            dataset_path = settings.dataset_path
         logger.info(f'Using basin list: {basins_file}')
         self.default_start_time = default_start_time
         self.default_end_time = default_end_time
@@ -282,7 +286,7 @@ class DataInterface(object):
 
         # 加载数据
         self.basin_list = load_basin_list(settings.basin_list_dir / basins_file)
-        self.dynamic_ds = load_xarray_dataset(settings.dataset_path, self.basin_list, 
+        self.dynamic_ds = load_xarray_dataset(dataset_path, self.basin_list, 
                                            basins_file, settings.meanstd_dir, dynamic_meanstd)
         attrs = load_camels_us_attributes(settings.dataset_dir, self.basin_list)
         self.static_ds = load_static_attributes(attrs, settings.attribute_list, basins_file, settings.meanstd_dir, static_meanstd)
@@ -325,17 +329,7 @@ class DataInterface(object):
 
 
 if __name__ == '__main__':
-    # logger.remove() # 禁用日志
-
-    datahub = DataInterface('Region_03_train.txt', '1990-01-01T00', '1995-01-01T00')
-    # loader = datahub.get_data_loader('1990-01-01T00', '1995-01-01T00', num_workers=1)
-    # for batch in loader:
-    #     print(batch['x_d'].shape)
-    #     print(batch['x_s'].shape)
-    #     print(batch['y'].shape)
-    #     input()
-    # basin_list = load_basin_list(settings.basin_list_dir / settings.basins_file)
-    # ds = load_xarray_dataset(settings.dataset_path, basin_list, settings.basins_file, settings.meanstd_dir)
-    # this_basin = ds.sel(basin='02111500').expand_dims('basin')
-    # df = this_basin.to_dataframe()
-    # df.to_csv('02111500.csv')
+    basin_list = load_basin_list(settings.basin_list_dir / '120_basin_list_evenly.txt')
+    dataset_path = '../data/CAMELS_US/hourly/120_basin_list_evenly_1y.nc'
+    ds = load_xarray_dataset(Path(dataset_path), basin_list, '120_basin_list_evenly.txt', settings.meanstd_dir)
+    print(ds)

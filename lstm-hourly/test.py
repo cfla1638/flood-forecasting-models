@@ -16,7 +16,7 @@ def setup_logger():
     # 设置logger
     logger.remove()
     logger.add(sys.stdout, level="INFO", format="<green>{time:HH:mm:ss}</green> | <level>{message}</level>")
-    logger.add("./test_log/log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
+    logger.add("./log/test_log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
 
 class TestInterface(object):
     def __init__(self, opts) -> None:
@@ -122,13 +122,16 @@ class TestInterface(object):
                 y_true_list.append(y.cpu().numpy())
                 y_pred_list.append(y_hat.cpu().numpy())
         logger.info(f'Average NSE: {avg_NSE / num_batch: .4f} | Average RMSE: {avg_RMSE / num_batch: .4f} | Average MAE: {avg_MAE / num_batch: .4f} | Average Bias: {avg_Bias / num_batch: .4f}')
-        y_true = np.concatenate(y_true_list, axis=0).reshape(-1)
-        y_pred = np.concatenate(y_pred_list, axis=0).reshape(-1)
+        y_true = np.concatenate(y_true_list, axis=0)    # (seq_len, 6) 需要展示 [:,0]
+        y_pred = np.concatenate(y_pred_list, axis=0)    # (seq_len, 6) 需要展示 [:,0], [1:,1], [2:,2], [3:,3] ...
         
-        # 绘制流量折线图
+        # 绘图
+        seq_len, lead_time = y_true.shape
+        colors = ['red', 'orange', 'green', 'purple', 'brown', 'pink']
         plt.figure(figsize=(12, 6))
-        plt.plot(y_true, label='True', color='blue', alpha=0.7)
-        plt.plot(y_pred, label='Predicted', color='red', linestyle='dashed', alpha=0.7)
+        plt.plot(y_true[:, 0], label='观测值', color='blue')
+        for i in range(lead_time):
+            plt.plot(range(i, seq_len), y_pred[i:, i], label=f'提前{i}步预测', color=colors[i], linestyle='dashed', alpha=(lead_time-i)/lead_time)
         plt.xlabel('Time Steps')
         plt.ylabel('Streamflow')
         plt.title(f'Basin {basin} - Observerd vs Predicted Streamflow')
@@ -136,6 +139,8 @@ class TestInterface(object):
         plt.show()
 
         # 绘制预测值与实际值的散点图
+        y_true = y_true.reshape(-1)
+        y_pred = y_pred.reshape(-1)
         plot_predictions(y_true, y_pred)
 
     def main(self):
@@ -170,9 +175,9 @@ if __name__ == '__main__':
     test_interface.main()
 
 # Generalization in time
-# python -u test.py --use_GPU --GPU_id=0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch4.pth --basin_list=32_basin_list.txt --test_basin_by_basin
+# python -u test.py --use_GPU --GPU_id=0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch5.pth --basin_list=30_basin_list_evenly.txt --test_basin_by_basin
 
 # Generalization in space
-# python -u test.py --use_GPU --GPU_id=0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch4.pth --basin_list=32_basin_list_test.txt --test_basin_by_basin
+# python -u test.py --use_GPU --GPU_id=0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch2.pth --basin_list=30_basin_list_test.txt --test_basin_by_basin
 
 # python -u test.py --use_GPU --GPU_id=0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch3.pth --basin_list=32_basin_list.txt --test_for_single_basin --gauge_id=03026500

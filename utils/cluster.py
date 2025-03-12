@@ -12,7 +12,8 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import matplotlib.pyplot as plt
 
-
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用 SimHei 字体
+plt.rcParams['axes.unicode_minus'] = False   # 解决负号显示问题
 
 os.environ["OMP_NUM_THREADS"] = "3" # 解决User Warning
 logger.remove()
@@ -75,7 +76,7 @@ def load_camels_us_attributes(data_dir: Path, basins: List[str] = []) -> pd.Data
     return df
 
 # 聚类分析主函数
-def cluster_camels_basins(data_dir: Path, basins: List[str] = [], max_clusters: int = 10):
+def cluster_camels_basins(data_dir: Path, basins: List[str] = [], max_clusters: int = 20):
     """
     对CAMELS US流域进行聚类，自动选择最佳集群数目。
     
@@ -165,21 +166,21 @@ def cluster_camels_basins(data_dir: Path, basins: List[str] = [], max_clusters: 
     # 7. 可视化（轮廓分数和肘部图）
     plt.figure(figsize=(12, 5))
     
-    # 轮廓分数图
+    # 轮廓系数
     plt.subplot(1, 2, 1)
     plt.plot(k_range, silhouette_scores, marker='o')
     plt.axvline(x=optimal_k, color='r', linestyle='--')
-    plt.title('Silhouette Score vs. Number of Clusters')
-    plt.xlabel('Number of Clusters (k)')
-    plt.ylabel('Silhouette Score')
+    plt.title('类簇数目与轮廓系数的关系')
+    plt.xlabel('类簇数目(k)')
+    plt.ylabel('轮廓系数(Silhouette Score)')
     
     # 肘部图
     plt.subplot(1, 2, 2)
     plt.plot(k_range, wss, marker='o')
     plt.axvline(x=optimal_k, color='r', linestyle='--')
-    plt.title('Elbow Method: WSS vs. Number of Clusters')
-    plt.xlabel('Number of Clusters (k)')
-    plt.ylabel('Within-Cluster Sum of Squares')
+    plt.title('肘部图')
+    plt.xlabel('类簇数目 (k)')
+    plt.ylabel('误差平方和(Within-Cluster Sum of Squares, SSE)')
     
     plt.tight_layout()
     plt.show()
@@ -228,5 +229,6 @@ def save_clusters_to_files(data_dir: Path, output_dir: Path, basins: List[str] =
 if __name__ == "__main__":
     data_dir = Path("../data/CAMELS_US")
     basins = load_basin_list(Path('../data/basin_list/516_basins_hourly.txt'))
-    output_dir = Path("../data/basin_list/clustered_basins")
-    save_clusters_to_files(data_dir, output_dir, basins)
+    # output_dir = Path("../data/basin_list/clustered_basins")
+    # save_clusters_to_files(data_dir, output_dir, basins)
+    cluster_camels_basins(data_dir, basins)

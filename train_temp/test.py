@@ -12,6 +12,9 @@ import pandas as pd
 import sys
 import torch
 
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用 SimHei 字体
+plt.rcParams['axes.unicode_minus'] = False   # 解决负号显示问题
+
 def setup_logger():
     # 设置logger
     logger.remove()
@@ -43,9 +46,10 @@ class TestInterface(object):
                 avg_Bias = 0.0
                 for batch in tqdm(loader, desc=f'Testing {basin} [{cur + 1}/{total_iter_cnt}]'):
                     x_d = batch['x_d'].to(device)
+                    x_s = batch['x_s'].to(device)
                     y = batch['y'].to(device)
 
-                    y_hat = model(x_d)
+                    y_hat = model(x_d, x_s)
                     avg_NSE += NSE(y_hat, y, datahub.basins_mean[basin])
                     avg_RMSE += RMSE(y_hat, y)
                     avg_MAE += MAE(y_hat, y)
@@ -93,9 +97,10 @@ class TestInterface(object):
         with torch.no_grad():
             for batch in tqdm(loader, desc=f'Testing {basin}'):
                 x_d = batch['x_d'].to(device)
+                x_s = batch['x_s'].to(device)
                 y = batch['y'].to(device)
                 
-                y_hat = model(x_d)
+                y_hat = model(x_d, x_s)
 
                 avg_NSE += NSE(y_hat, y, datahub.basins_mean[basin])
                 avg_RMSE += RMSE(y_hat, y)
@@ -130,7 +135,7 @@ class TestInterface(object):
     def main(self):
         opts = self.opts
 
-        model = MyModel(12, num_timestep=8, lead_time=6)
+        model = MyModel(12, 27, num_timestep=8, lead_time=6)
         model.load_state_dict(torch.load(self.opts.model_path, weights_only=True))
         logger.info(f'Model loaded from {self.opts.model_path}')
 
@@ -158,10 +163,11 @@ if __name__ == '__main__':
     test_interface = TestInterface(args.get_opts())
     test_interface.main()
 
-# Generalization in time
-# python -u test.py --use_GPU --GPU_id=0 --num_workers=2 --start_time=2009-10-01T00 --end_time=2011-09-30T00  --model_path=./checkpoints/epoch4.pth --basin_list=30_basin_list_evenly.txt --test_basin_by_basin
+# 时间泛化能力测试
+# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly.txt --test_basin_by_basin
 
-# Generalization in space
-# python -u test.py --use_GPU --GPU_id=0 --num_workers=2 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --dynamic_meanstd=dynamic_30_basin_list_evenly.csv --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly_test.txt --test_basin_by_basin
+# 空间泛化能力测试
+# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --dynamic_meanstd=dynamic_150_basin_list_evenly.csv --static_meanstd=static_150_basin_list_evenly.csv --model_path=./checkpoints/epoch6.pth --basin_list=30_basin_list_evenly_test.txt --test_basin_by_basin
 
-# python -u test.py --use_GPU --GPU_id=0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch3.pth --basin_list=32_basin_list.txt --test_for_single_basin --gauge_id=03026500
+# 单流域测试
+# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --dynamic_meanstd=dynamic_150_basin_list_evenly.csv --static_meanstd=static_150_basin_list_evenly.csv --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly_test.txt --test_for_single_basin --gauge_id=06917000

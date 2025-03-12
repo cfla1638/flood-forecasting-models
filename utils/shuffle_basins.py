@@ -45,7 +45,7 @@ def get_basin_list_from_clusters(cluster_dir: Path, cnt_per_cluster: int, seed :
         temp_list = load_basin_list(file)
         np.random.seed(seed)
         np.random.shuffle(temp_list)
-        basin_list.extend(temp_list[:cnt_per_cluster])
+        basin_list.extend(temp_list[25:50])
     
     return basin_list
 
@@ -73,4 +73,9 @@ if __name__ == '__main__':
     cluster_dir = Path("../data/basin_list/clustered_basins/")
     res = get_basin_list_from_clusters(cluster_dir, 5, seed=42)
     num_cluster_(cluster_dir, res)
-    save_list(res, Path("../data/basin_list/30_basin_list_evenly.txt"))
+    save_list(res, Path("../data/basin_list/120_basin_list_evenly.txt"))
+
+# 30_basin_list_evenly.txt             0:5
+# 30_basin_list_evenly_test.txt        5:10
+# 30_basin_list_evenly_test_1.txt      10:15
+# 120_basin_list_evenly.txt            25:50

@@ -255,7 +255,8 @@ class DataInterface(object):
                  default_batch_size : int = 256,
                  default_num_workers : int = 8,
                  dynamic_meanstd = None,
-                 static_meanstd = None
+                 static_meanstd = None,
+                 dataset_path = None
                  ) -> None:
         """
         Parameters:
@@ -270,6 +271,8 @@ class DataInterface(object):
         # 处理默认参数
         if basins_file is None:
             basins_file = settings.basins_file
+        if dataset_path is None:
+            dataset_path = settings.dataset_path
         logger.info(f'Using basin list: {basins_file}')
         self.default_start_time = default_start_time
         self.default_end_time = default_end_time
@@ -286,7 +289,7 @@ class DataInterface(object):
 
         # 加载数据
         self.basin_list = load_basin_list(settings.basin_list_dir / basins_file)
-        self.dynamic_ds = load_xarray_dataset(settings.dataset_path, self.basin_list, 
+        self.dynamic_ds = load_xarray_dataset(dataset_path, self.basin_list, 
                                            basins_file, settings.meanstd_dir, dynamic_meanstd)
         attrs = load_camels_us_attributes(settings.dataset_dir, self.basin_list)
         self.static_ds = load_static_attributes(attrs, settings.attribute_list, basins_file, settings.meanstd_dir, static_meanstd)

@@ -121,10 +121,11 @@ class TrainInterface(object):
             os.mkdir(opts.checkpoints_dir)
             logger.info(f'Create checkpoints dir {opts.checkpoints_dir}')
         
-        data_interface = DataInterface(opts.basin_list, dynamic_meanstd=opts.dynamic_meanstd, static_meanstd=opts.static_meanstd)
+        train_data_interface = DataInterface(opts.train_basin_list, dynamic_meanstd=opts.dynamic_meanstd, static_meanstd=opts.static_meanstd, dataset_path=opts.train_dataset_path)
+        val_data_interface = DataInterface(opts.val_basin_list, dynamic_meanstd=opts.dynamic_meanstd, static_meanstd=opts.static_meanstd, dataset_path=opts.val_dataset_path)
         if not opts.validate:
-            train_loader = data_interface.get_data_loader(opts.train_start_time, opts.train_end_time, opts.batch_size, num_workers=opts.num_workers)
-        val_loader = data_interface.get_data_loader(opts.val_start_time, opts.val_end_time, opts.batch_size, num_workers=opts.num_workers)
+            train_loader = train_data_interface.get_data_loader(opts.train_start_time, opts.train_end_time, opts.batch_size, num_workers=opts.num_workers)
+        val_loader = val_data_interface.get_data_loader(opts.val_start_time, opts.val_end_time, opts.batch_size, num_workers=opts.num_workers)
 
         model = MyModel(11, 27, 256)
         model.apply(init_weights)
@@ -167,7 +168,9 @@ if __name__ == '__main__':
     train_interface = TrainInterface(args.get_opts())
     train_interface.main()
 
-# python train.py --batch_size=256 --train_start_time=1997-10-01T00 --train_end_time=2007-09-30T00 --epoch=50 --save_freq=1 --use_GPU --GPU_id=0 --val_freq=3 --val_start_time=2007-10-01T00 --val_end_time=2009-09-30T00 --num_workers=8 --basin_list=32_basin_list.txt --pretrain=./checkpoints/epoch3.pth --start_epoch=4
 
+# Time
+# python train.py --batch_size=256 --train_start_time=2002-10-01T00 --train_end_time=2007-09-30T00 --epoch=50 --save_freq=1 --use_GPU --GPU_id=0 --val_freq=1 --val_start_time=2007-10-01T00 --val_end_time=2009-09-30T00 --num_workers=8 --train_basin_list=30_basin_list_evenly.txt --val_basin_list=30_basin_list_evenly.txt --train_dataset_path=../data/CAMELS_US/hourly/30_basin_list_evenly_train_5y.nc --val_dataset_path=../data/CAMELS_US/hourly/30_basin_list_evenly_val_2y.nc
 
-# scp -rP 54212 ./data/CAMELS_US/hourly/ root@connect.yza1.seetacloud.com:/root/autodl-tmp
+# Space
+# python train.py --batch_size=256 --train_start_time=2002-10-01T00 --train_end_time=2003-09-30T00 --epoch=50 --save_freq=1 --use_GPU --GPU_id=0 --val_freq=1 --val_start_time=2007-10-01T00 --val_end_time=2009-09-30T00 --num_workers=8 --train_basin_list=150_basin_list_evenly.txt --val_basin_list=30_basin_list_evenly_test.txt --train_dataset_path=../data/CAMELS_US/hourly/150_basin_list_evenly_1y.nc --val_dataset_path=../data/CAMELS_US/hourly/30_basin_list_evenly_test_val_2y.nc --dynamic_meanstd=dynamic_150_basin_list_evenly.csv --static_meanstd=static_150_basin_list_evenly.csv
