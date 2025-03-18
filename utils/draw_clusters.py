@@ -53,7 +53,7 @@ def draw_clusters(output_dir: Path, dataset_path: Path):
         gdf = gdf.to_crs(epsg=3857)
 
         # 绘制站点
-        gdf.plot(ax=ax, color=colors(idx), markersize=50, alpha=0.8, edgecolor="black", label=f"Cluster {cluster_id}")
+        gdf.plot(ax=ax, color=colors(idx), markersize=50, alpha=0.8, edgecolor="black", label=f"类别 {cluster_id}")
 
     # 添加底图
     tile_url = "http://wprd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}"
@@ -61,7 +61,6 @@ def draw_clusters(output_dir: Path, dataset_path: Path):
 
     # 设置图例和标题
     ax.legend()
-    ax.set_title("不同类别流域的分布", fontsize=14)
     ax.set_xlabel("经度")
     ax.set_ylabel("纬度")
 

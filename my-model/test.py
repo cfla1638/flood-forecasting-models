@@ -113,14 +113,15 @@ class TestInterface(object):
         
         # 绘图
         seq_len, lead_time = y_true.shape
+        lead_time = 6
         colors = ['red', 'orange', 'green', 'purple', 'brown', 'pink']
         plt.figure(figsize=(12, 6))
         plt.plot(y_true[:, 0], label='观测值', color='blue')
         for i in range(lead_time):
-            plt.plot(range(i, seq_len), y_pred[i:, i], label=f'提前{i}步预测', color=colors[i], linestyle='dashed', alpha=(lead_time-i)/lead_time)
-        plt.xlabel('Time Steps')
-        plt.ylabel('Streamflow')
-        plt.title(f'Basin {basin} - Observerd vs Predicted Streamflow')
+            plt.plot(range(i, seq_len), y_pred[i:, i], label=f'提前{i+1}步预测', color=colors[i], linestyle='dashed', alpha=(lead_time-i)/lead_time)
+        plt.xlabel('时间步')
+        plt.ylabel('流量值')
+        plt.title(f'流域 {basin} - 观测值与预测值对比')
         plt.legend()
         plt.show()
 
@@ -160,7 +161,7 @@ if __name__ == '__main__':
     test_interface = TestInterface(args.get_opts())
     test_interface.main()
 
-# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly.txt --test_basin_by_basin
+# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly.txt --test_for_single_basin --gauge_id=12488500
 
 # python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --dynamic_meanstd=dynamic_30_basin_list_evenly.csv --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly_test.txt --test_basin_by_basin
 
