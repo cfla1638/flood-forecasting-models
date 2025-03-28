@@ -154,4 +154,5 @@ if __name__ == '__main__':
     train_interface = TrainInterface(args.get_opts())
     train_interface.main()
 
+# 读取整个数据集文件训练，数据处理相对较慢，内存占用较大；测试时间泛化能力
 # python train.py --batch_size=256 --train_start_time=2002-10-01T00 --train_end_time=2007-09-30T00 --epoch=50 --save_freq=1 --use_GPU --GPU_id=0 --val_freq=1 --val_start_time=2007-10-01T00 --val_end_time=2009-09-30T00 --num_workers=8 --basin_list=30_basin_list_evenly.txt

@@ -1,4 +1,4 @@
-# GRU模型
+# LSTM
 import numpy as np
 import torch
 import torch.nn as nn
@@ -35,8 +35,8 @@ class MyModel(nn.Module):
         )
 
         hidden_dim = dynamic_embd_dim + static_embd_dim
-        # GRU
-        self.gru = nn.GRU(input_size=hidden_dim, hidden_size=hidden_dim, batch_first=True)
+        # LSTM
+        self.lstm = nn.LSTM(input_size=hidden_dim, hidden_size=hidden_dim, batch_first=True)
 
         # Output Layer
         self.output_layer = nn.Sequential(
@@ -60,7 +60,7 @@ class MyModel(nn.Module):
         x_d = torch.concat([x_d, x_s], dim=-1)  # (batch_size, seq_len, dynamic_embd_dim + static_embd_dim)
 
         # LSTM
-        x_d, _ = self.gru(x_d)              # (batch_size, seq_len, dynamic_embd_dim)
+        x_d, _ = self.lstm(x_d)              # (batch_size, seq_len, dynamic_embd_dim)
 
         return self.output_layer(x_d.flatten(1))    # (batch_size, lead_time)
     
@@ -74,7 +74,7 @@ def init_weights(model):
             nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
             if m.bias is not None:
                 nn.init.zeros_(m.bias)
-        elif isinstance(m, nn.GRU):
+        elif isinstance(m, nn.LSTM):
             for name, param in m.named_parameters():
                 if "weight_ih" in name:
                     nn.init.kaiming_normal_(param, mode="fan_in", nonlinearity="relu")

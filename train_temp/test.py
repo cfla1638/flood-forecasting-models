@@ -164,10 +164,10 @@ if __name__ == '__main__':
     test_interface.main()
 
 # 时间泛化能力测试
-# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly.txt --test_basin_by_basin
+# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch2.pth --basin_list=30_basin_list_evenly.txt --test_basin_by_basin --dynamic_meanstd=dynamic_30_basin_list_evenly.csv --static_meanstd=static_30_basin_list_evenly.csv
 
 # 空间泛化能力测试
-# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --dynamic_meanstd=dynamic_150_basin_list_evenly.csv --static_meanstd=static_150_basin_list_evenly.csv --model_path=./checkpoints/epoch4.pth --basin_list=30_basin_list_evenly_test.txt --test_basin_by_basin
+# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --dynamic_meanstd=dynamic_150_basin_list_evenly.csv --static_meanstd=static_150_basin_list_evenly.csv --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly_test.txt --test_basin_by_basin
 
 # 单流域测试
 # python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --dynamic_meanstd=dynamic_150_basin_list_evenly.csv --static_meanstd=static_150_basin_list_evenly.csv --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly_test.txt --test_for_single_basin --gauge_id=06917000
