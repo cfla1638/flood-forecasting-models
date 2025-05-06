@@ -4,6 +4,7 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import contextily as ctx
 from pathlib import Path
+import xyzservices.providers as xyz
 
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用 SimHei 字体
 plt.rcParams['axes.unicode_minus'] = False   # 解决负号显示问题
@@ -35,6 +36,7 @@ def draw_clusters(output_dir: Path, dataset_path: Path):
     colors = plt.cm.get_cmap("tab10", len(cluster_files))
 
     # 创建绘图
+    plt.rc("font", size=14)
     fig, ax = plt.subplots(figsize=(10, 8))
 
     for idx, file in enumerate(cluster_files):
@@ -53,16 +55,15 @@ def draw_clusters(output_dir: Path, dataset_path: Path):
         gdf = gdf.to_crs(epsg=3857)
 
         # 绘制站点
-        gdf.plot(ax=ax, color=colors(idx), markersize=50, alpha=0.8, edgecolor="black", label=f"类别 {cluster_id}")
+        gdf.plot(ax=ax, color=colors(idx), markersize=60, alpha=1, edgecolor="black", label=f"类别 {int(cluster_id) + 1}")
 
     # 添加底图
     tile_url = "http://wprd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}"
+    # tile_url = xyz.OpenTopoMap.url
     ctx.add_basemap(ax, source=tile_url, alpha=0.5)
 
     # 设置图例和标题
     ax.legend()
-    ax.set_xlabel("经度")
-    ax.set_ylabel("纬度")
 
     # 移除坐标轴刻度
     ax.set_xticks([])

@@ -164,13 +164,14 @@ def cluster_camels_basins(data_dir: Path, basins: List[str] = [], max_clusters: 
     df_numeric['cluster'] = labels
     
     # 7. 可视化（轮廓分数和肘部图）
+    plt.rc('font', size=16)
     plt.figure(figsize=(12, 5))
     
     # 轮廓系数
     plt.subplot(1, 2, 1)
     plt.plot(k_range, silhouette_scores, marker='o')
     plt.axvline(x=optimal_k, color='r', linestyle='--')
-    plt.title('类簇数目与轮廓系数的关系')
+    # plt.title('(a) 类簇数目与轮廓系数的关系')
     plt.xlabel('类簇数目(k)')
     plt.ylabel('轮廓系数(Silhouette Score)')
     
@@ -178,9 +179,9 @@ def cluster_camels_basins(data_dir: Path, basins: List[str] = [], max_clusters: 
     plt.subplot(1, 2, 2)
     plt.plot(k_range, wss, marker='o')
     plt.axvline(x=optimal_k, color='r', linestyle='--')
-    plt.title('肘部图')
+    # plt.title('(b) 肘部图')
     plt.xlabel('类簇数目 (k)')
-    plt.ylabel('误差平方和(Within-Cluster Sum of Squares, SSE)')
+    plt.ylabel('簇内平方和误差(WCSS)')
     
     plt.tight_layout()
     plt.show()
@@ -223,9 +224,6 @@ def save_clusters_to_files(data_dir: Path, output_dir: Path, basins: List[str] =
         
         print(f"Saved {len(cluster_ids)} basins to {cluster_file}")
 
-
-
-# 示例用法
 if __name__ == "__main__":
     data_dir = Path("../data/CAMELS_US")
     basins = load_basin_list(Path('../data/basin_list/516_basins_hourly.txt'))

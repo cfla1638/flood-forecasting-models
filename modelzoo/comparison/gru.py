@@ -1,11 +1,7 @@
 # GRU模型
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from typing import Dict, List, Tuple, Union
 from torchinfo import summary
-from loguru import logger
 
 class MyModel(nn.Module):
     def __init__(self, 
@@ -90,10 +86,6 @@ def init_weights(model):
                     nn.init.zeros_(param)
 
 if __name__ == '__main__':
-    # x_d = torch.randn(32, 8, 12)
-    # x_s = torch.randn(32, 27)
     model = MyModel(12, 27)
     model.apply(init_weights)
-    # y = model(x_d, x_s)
-    # print(y.shape)
     summary(model, input_size=[(32, 8, 12), (32, 27)], device='cpu')

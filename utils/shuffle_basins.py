@@ -1,4 +1,4 @@
-# 抽取数据集
+# 用于打乱流域列表，抽取训练和测试用的数据集
 import numpy as np
 import xarray as xr
 from pathlib import Path

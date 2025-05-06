@@ -327,17 +327,5 @@ class DataInterface(object):
 
 
 if __name__ == '__main__':
-    # logger.remove() # 禁用日志
-
-    datahub = DataInterface('Region_03_train.txt', '1990-01-01T00', '1995-01-01T00')
-    # loader = datahub.get_data_loader('1990-01-01T00', '1995-01-01T00', num_workers=1)
-    # for batch in loader:
-    #     print(batch['x_d'].shape)
-    #     print(batch['x_s'].shape)
-    #     print(batch['y'].shape)
-    #     input()
-    # basin_list = load_basin_list(settings.basin_list_dir / settings.basins_file)
-    # ds = load_xarray_dataset(settings.dataset_path, basin_list, settings.basins_file, settings.meanstd_dir)
-    # this_basin = ds.sel(basin='02111500').expand_dims('basin')
-    # df = this_basin.to_dataframe()
-    # df.to_csv('02111500.csv')
+    logger.remove() # 禁用日志
+    pass

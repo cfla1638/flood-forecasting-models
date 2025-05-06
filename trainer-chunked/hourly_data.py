@@ -8,12 +8,11 @@
 import numpy as np
 import pandas as pd
 import xarray as xr
-import sys
 import torch
 import settings
 
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List
 from torch.utils.data import Dataset, DataLoader
 from loguru import logger
 

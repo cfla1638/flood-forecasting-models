@@ -1,3 +1,4 @@
+# 根据时间范围和流域，对原始的数据集`.nc`进行分割，将它分割成若干小文件
 import numpy as np
 import xarray
 from pathlib import Path

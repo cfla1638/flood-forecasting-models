@@ -1,10 +1,5 @@
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from typing import Dict, List, Tuple, Union
-from torchinfo import summary
-from loguru import logger
 
 class MyModel(nn.Module):
     def __init__(self, dynamic_input_dim: int, num_timestep: int, lead_time: int, dropout=0.1) -> None:
@@ -121,7 +116,4 @@ def init_weights(model):
                     nn.init.zeros_(param)
 
 if __name__ == '__main__':
-    # model = HybirdModel(dynamic_input_dim=12, num_timestep=8, lead_time=6)
-    # x = torch.randn(32, 8, 12)
-    # print(model(x).shape)
     pass

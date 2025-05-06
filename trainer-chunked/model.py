@@ -1,10 +1,8 @@
-import numpy as np
+# 流域属性拼接 + CNN
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Tuple, Union
 from torchinfo import summary
-from loguru import logger
 
 class EncoderBlock(nn.Module):
     def __init__(self, dim: int, num_head: int, dropout: float = 0.1) -> None:
@@ -17,15 +15,7 @@ class EncoderBlock(nn.Module):
         super().__init__()
         self.multi_head_attention = nn.MultiheadAttention(dim, num_head, batch_first=True, dropout=dropout)
         self.layer_norm1 = nn.LayerNorm(dim)
-        
-        # 使用Leaky ReLU的前馈网络
-        self.feed_forward = nn.Sequential(
-            nn.Linear(dim, dim * 4),  # 保持4倍维度扩展
-            nn.LeakyReLU(negative_slope=0.1),
-            nn.Dropout(dropout),
-            nn.Linear(dim * 4, dim),
-            nn.Dropout(dropout)
-        )
+        self.conv = nn.Conv1d(dim, dim, 3, padding='same')     # 一维卷积
         self.layer_norm2 = nn.LayerNorm(dim)
         self.dropout = nn.Dropout(dropout)
 
@@ -35,20 +25,18 @@ class EncoderBlock(nn.Module):
          - x: (batch_size, seq_len, input_dim)
         Return: (batch_size, seq_len, input_dim)
         """
-        # 多头自注意力部分
-        attn_output, _ = self.multi_head_attention(x, x, x)  # (batch_size, seq_len, input_dim)
-        x = self.layer_norm1(x + self.dropout(attn_output))  # (batch_size, seq_len, input_dim)
-        
-        # 使用Leaky ReLU的前馈网络
-        ffn_output = self.feed_forward(x)  # (batch_size, seq_len, input_dim)
-        return self.layer_norm2(x + self.dropout(ffn_output))
+        attn_output, _ = self.multi_head_attention(x, x, x) # (batch_size, seq_len, input_dim)
+        x = self.layer_norm1(x + self.dropout(attn_output)) # (batch_size, seq_len, input_dim)
+        conv1d_output = self.conv(x.transpose(-1, -2)).transpose(-1, -2)
+        conv1d_output = F.leaky_relu(conv1d_output, negative_slope=0.1)
+        return self.layer_norm2(x + self.dropout(conv1d_output))
 
 class MyModel(nn.Module):
     def __init__(self, 
                  dynamic_input_dim: int,    # 输入序列数据的维度
                  static_input_dim: int,     # 输入序列数据的维度
                  dynamic_embd_dim: int = 256, # 动态数据的embedding维度
-                 static_embd_dim: int = 128,  # 静态数据的embedding维度
+                 static_embd_dim: int = 32,  # 静态数据的embedding维度
                  num_timestep: int = 8,     # 根据过去几个小时的数据预测
                  lead_time: int = 6,        # 预测未来几个消失的数据
                  num_head: int = 8,         # 多头注意力的头数
@@ -73,24 +61,25 @@ class MyModel(nn.Module):
             nn.Linear(static_embd_dim, static_embd_dim)
         )
 
+        hidden_dim = dynamic_embd_dim + static_embd_dim
         # LSTM
-        self.lstm = nn.LSTM(input_size=dynamic_embd_dim, hidden_size=dynamic_embd_dim, batch_first=True)
+        self.lstm = nn.LSTM(input_size=hidden_dim, hidden_size=hidden_dim, batch_first=True)
 
         # Encoder Layers
         self.encoder_layers = nn.ModuleList([
-            EncoderBlock(dim=dynamic_embd_dim, num_head=num_head, dropout=dropout) for _ in range(encoder_layers)
+            EncoderBlock(dim=hidden_dim, num_head=num_head, dropout=dropout) for _ in range(encoder_layers)
         ])
 
         self.GAP = nn.AdaptiveAvgPool1d(output_size=1)
         self.dense = nn.Sequential(
-            nn.Linear(dynamic_embd_dim, global_embd_dim),
+            nn.Linear(hidden_dim, global_embd_dim),
             nn.LeakyReLU(negative_slope=0.1),
             nn.Linear(global_embd_dim, global_embd_dim)
         )
 
         # Output Layer
         self.output_layer = nn.Sequential(
-            nn.Linear((dynamic_embd_dim + global_embd_dim) * num_timestep, 64),
+            nn.Linear((hidden_dim + global_embd_dim) * num_timestep, 64),
             nn.LeakyReLU(negative_slope=0.1),
             nn.Linear(64, lead_time)
         )
@@ -104,7 +93,10 @@ class MyModel(nn.Module):
         Return: (batch_size, lead_time)
         """
         x_d = self.dynamic_embd_net(x_d)    # (batch_size, seq_len, dynamic_embd_dim)
-        # x_s = self.static_embd_net(x_s)     # (batch_size, static_embd_dim)
+        x_s = self.static_embd_net(x_s)     # (batch_size, static_embd_dim)
+
+        x_s = x_s.unsqueeze(1).expand(-1, x_d.shape[1], -1)  # (batch_size, seq_len, static_embd_dim)
+        x_d = torch.concat([x_d, x_s], dim=-1)  # (batch_size, seq_len, dynamic_embd_dim + static_embd_dim)
 
         # LSTM
         x_d, _ = self.lstm(x_d)              # (batch_size, seq_len, dynamic_embd_dim)
@@ -146,10 +138,6 @@ def init_weights(model):
                     nn.init.zeros_(param)
 
 if __name__ == '__main__':
-    # x_d = torch.randn(32, 8, 12)
-    # x_s = torch.randn(32, 27)
     model = MyModel(12, 27)
     model.apply(init_weights)
-    # y = model(x_d, x_s)
-    # print(y.shape)
     summary(model, input_size=[(32, 8, 12), (32, 27)], device='cpu')

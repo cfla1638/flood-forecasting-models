@@ -1,5 +1,4 @@
 import argparse
-import torch
 
 class Args(object):
     def __init__(self):

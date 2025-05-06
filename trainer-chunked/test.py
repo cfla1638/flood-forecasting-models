@@ -8,9 +8,12 @@ from metrics import NSE, RMSE, MAE, Bias
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import sys
 import torch
+
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用 SimHei 字体
+plt.rcParams['axes.unicode_minus'] = False   # 解决负号显示问题
+plt.rc("font", size=14)  # 设置字体大小
 
 def setup_logger():
     # 设置logger
@@ -113,14 +116,13 @@ class TestInterface(object):
         
         # 绘图
         seq_len, lead_time = y_true.shape
-        lead_time = 6
         colors = ['red', 'orange', 'green', 'purple', 'brown', 'pink']
         plt.figure(figsize=(12, 6))
         plt.plot(y_true[:, 0], label='观测值', color='blue')
         for i in range(lead_time):
-            plt.plot(range(i, seq_len), y_pred[i:, i], label=f'提前{i+1}步预测', color=colors[i], linestyle='dashed', alpha=(lead_time-i)/lead_time)
+            plt.plot(range(i, seq_len), y_pred[i:, i], label=f'提前{i + 1}步预测', color=colors[i], linestyle='dashed', alpha=(lead_time-i)/lead_time)
         plt.xlabel('时间步')
-        plt.ylabel('流量值')
+        plt.ylabel('归一化后的流量值')
         plt.title(f'流域 {basin} - 观测值与预测值对比')
         plt.legend()
         plt.show()
@@ -161,7 +163,11 @@ if __name__ == '__main__':
     test_interface = TestInterface(args.get_opts())
     test_interface.main()
 
-# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly.txt --test_for_single_basin --gauge_id=12488500
+# 时间泛化能力测试
+# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly.txt --test_basin_by_basin --dynamic_meanstd=dynamic_30_basin_list_evenly.csv --static_meanstd=static_30_basin_list_evenly.csv
 
-# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --dynamic_meanstd=dynamic_30_basin_list_evenly.csv --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly_test.txt --test_basin_by_basin
+# 空间泛化能力测试
+# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --dynamic_meanstd=dynamic_150_basin_list_evenly.csv --static_meanstd=static_150_basin_list_evenly.csv --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly_test.txt --test_basin_by_basin
 
+# 单流域测试
+# python -u test.py --use_GPU --GPU_id 0 --num_workers=4 --start_time=2009-10-01T00 --end_time=2011-09-30T00 --dynamic_meanstd=dynamic_30_basin_list_evenly.csv --static_meanstd=static_30_basin_list_evenly.csv --model_path=./checkpoints/epoch3.pth --basin_list=30_basin_list_evenly.txt --test_for_single_basin --gauge_id=12488500

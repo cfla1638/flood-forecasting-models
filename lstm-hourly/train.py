@@ -9,7 +9,6 @@ from metrics import NSE, RMSE, MAE, Bias
 import os
 import sys
 import torch
-import settings
 
 def setup_logger():
     # 设置logger

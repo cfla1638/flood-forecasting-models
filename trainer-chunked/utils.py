@@ -41,16 +41,16 @@ def draw_basins(basin_list):
     gdf = gdf.to_crs(epsg=3857)
 
     # 绘制站点
-    gdf.plot(ax=ax, color="red", markersize=50, alpha=0.8, edgecolor="black", label="Gauge Stations")
+    gdf.plot(ax=ax, color="red", markersize=50, alpha=0.8, edgecolor="black", label="流域")
 
     tile_url = "http://wprd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}"
     ctx.add_basemap(ax, source=tile_url, alpha=0.5)
 
     # 设置图例和标题
     ax.legend()
-    ax.set_title("Gauge Station Locations", fontsize=12)
-    ax.set_xlabel("Longitude")
-    ax.set_ylabel("Latitude")
+    ax.set_title("CAMELS US数据集中流域的位置", fontsize=12)
+    ax.set_xlabel("经度")
+    ax.set_ylabel("纬度")
 
     # 移除坐标轴刻度
     ax.set_xticks([])
@@ -154,26 +154,20 @@ def plot_predictions(y_true, y_pred, scatter_color='blue', fit_color=None):
 
 
 if __name__ == '__main__':
+    pass
+    # # Test for draw_with_metric function
     # basin_list_path = '../data/basin_list/train_val_test/Region_03_train.txt'  # 流域列表路径
     # basin_list = load_basin_list(Path(basin_list_path))
     # metrics = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9, -1]
     # draw_with_metric(basin_list, metrics)
     
+    # # Test for draw_basins function
     # basin_list = '../data/basin_list/32_basin_list.txt'
     # basin_list = load_basin_list(Path(basin_list))
     # draw_basins(basin_list)
 
-    # 生成一些示例数据
+    # # Test for plot_predictions function
     # np.random.seed(42)
     # y_true = np.linspace(0, 100, 50)  # 实际值
     # y_pred = y_true * 0.9 + np.random.normal(0, 5, 50)  # 模拟预测值（带噪声）
-
-    # # 绘制
     # plot_predictions(y_true, y_pred, scatter_color='blue')
-
-    b1 = '../data/basin_list/32_basin_list.txt'
-    b1 = load_basin_list(Path(b1))
-    b2 = '../utils/32_basin_list.txt'
-    b2 = load_basin_list(Path(b2))
-    # 检查两个列表是否有重复
-    print(set(b1) & set(b2))

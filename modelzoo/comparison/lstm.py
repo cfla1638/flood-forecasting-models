@@ -1,35 +1,7 @@
-# 流域属性拼接 + CNN
+# LSTM
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torchinfo import summary
-
-class EncoderBlock(nn.Module):
-    def __init__(self, dim: int, num_head: int, dropout: float = 0.1) -> None:
-        """
-        Parameters:
-         - dim: 输入的维度
-         - num_head: 多头自注意力的头数
-         - dropout: dropout的概率
-        """
-        super().__init__()
-        self.multi_head_attention = nn.MultiheadAttention(dim, num_head, batch_first=True, dropout=dropout)
-        self.layer_norm1 = nn.LayerNorm(dim)
-        self.conv = nn.Conv1d(dim, dim, 3, padding='same')     # 一维卷积
-        self.layer_norm2 = nn.LayerNorm(dim)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Parameter:
-         - x: (batch_size, seq_len, input_dim)
-        Return: (batch_size, seq_len, input_dim)
-        """
-        attn_output, _ = self.multi_head_attention(x, x, x) # (batch_size, seq_len, input_dim)
-        x = self.layer_norm1(x + self.dropout(attn_output)) # (batch_size, seq_len, input_dim)
-        conv1d_output = self.conv(x.transpose(-1, -2)).transpose(-1, -2)
-        conv1d_output = F.leaky_relu(conv1d_output, negative_slope=0.1)
-        return self.layer_norm2(x + self.dropout(conv1d_output))
 
 class MyModel(nn.Module):
     def __init__(self, 
@@ -39,9 +11,6 @@ class MyModel(nn.Module):
                  static_embd_dim: int = 32,  # 静态数据的embedding维度
                  num_timestep: int = 8,     # 根据过去几个小时的数据预测
                  lead_time: int = 6,        # 预测未来几个消失的数据
-                 num_head: int = 8,         # 多头注意力的头数
-                 encoder_layers: int = 1,   # 编码器的层数
-                 global_embd_dim: int = 128, # 全局嵌入的维度
                  dropout=0.1) -> None:
         super().__init__()
 
@@ -65,21 +34,9 @@ class MyModel(nn.Module):
         # LSTM
         self.lstm = nn.LSTM(input_size=hidden_dim, hidden_size=hidden_dim, batch_first=True)
 
-        # Encoder Layers
-        self.encoder_layers = nn.ModuleList([
-            EncoderBlock(dim=hidden_dim, num_head=num_head, dropout=dropout) for _ in range(encoder_layers)
-        ])
-
-        self.GAP = nn.AdaptiveAvgPool1d(output_size=1)
-        self.dense = nn.Sequential(
-            nn.Linear(hidden_dim, global_embd_dim),
-            nn.LeakyReLU(negative_slope=0.1),
-            nn.Linear(global_embd_dim, global_embd_dim)
-        )
-
         # Output Layer
         self.output_layer = nn.Sequential(
-            nn.Linear((hidden_dim + global_embd_dim) * num_timestep, 64),
+            nn.Linear(hidden_dim * num_timestep, 64),
             nn.LeakyReLU(negative_slope=0.1),
             nn.Linear(64, lead_time)
         )
@@ -100,15 +57,6 @@ class MyModel(nn.Module):
 
         # LSTM
         x_d, _ = self.lstm(x_d)              # (batch_size, seq_len, dynamic_embd_dim)
-
-        # Encoder Layers
-        encoder_output = x_d
-        for encoder in self.encoder_layers:
-            encoder_output = encoder(encoder_output)    # (batch_size, seq_len, dynamic_embd_dim)
-
-        encoder_output = self.GAP(encoder_output.transpose(-1, -2)).transpose(-1, -2)  # (batch_size, 1, dynamic_embd_dim)
-        encoder_output = self.dense(encoder_output)  # (batch_size, global_embd_dim)
-        x_d = torch.concat([x_d, encoder_output.expand(-1, x_d.shape[1], -1)], dim=-1)  # (batch_size, seq_len, dynamic_embd_dim + global_embd_dim)
 
         return self.output_layer(x_d.flatten(1))    # (batch_size, lead_time)
     
