@@ -128,7 +128,7 @@ flood-forecasting-models
 > - ...
 > ```
 
-![CAMELS US数据集的流域分布](./assets/Basin Locations.png)  
+![CAMELS US数据集的流域分布](./assets/Basin_Locations.png)  
 
 ## 5. 对比模型
 
