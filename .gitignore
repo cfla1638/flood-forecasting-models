@@ -7,7 +7,7 @@
 .coverage
 .nc
 bug_fix.py
-.log
+**/*.log
 
 # folder
 build/*
