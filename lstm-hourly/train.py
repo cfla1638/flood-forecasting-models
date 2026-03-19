@@ -10,8 +10,8 @@ import os
 import sys
 import torch
 
+# 设置logger
 def setup_logger():
-    # 设置logger
     logger.remove()
     logger.add(sys.stdout, level="INFO", format="<green>{time:HH:mm:ss}</green> | <level>{message}</level>")
     logger.add("./log/train_log{time}.log", level="INFO", rotation="20 MB", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")

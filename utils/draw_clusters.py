@@ -6,8 +6,8 @@ import contextily as ctx
 from pathlib import Path
 import xyzservices.providers as xyz
 
-plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用 SimHei 字体
-plt.rcParams['axes.unicode_minus'] = False   # 解决负号显示问题
+plt.rcParams['font.sans-serif'] = ['SimHei']
+plt.rcParams['axes.unicode_minus'] = False
 
 def load_basin_list(file_path: Path):
     """读取流域列表"""

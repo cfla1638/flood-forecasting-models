@@ -77,7 +77,7 @@ class MyModel(nn.Module):
             nn.Linear(global_embd_dim, global_embd_dim)
         )
 
-        # Output Layer
+        # 输出层
         self.output_layer = nn.Sequential(
             nn.Linear((hidden_dim + global_embd_dim) * num_timestep, 64),
             nn.LeakyReLU(negative_slope=0.1),

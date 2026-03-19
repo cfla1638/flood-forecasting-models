@@ -230,3 +230,4 @@ if __name__ == "__main__":
     # output_dir = Path("../data/basin_list/clustered_basins")
     # save_clusters_to_files(data_dir, output_dir, basins)
     cluster_camels_basins(data_dir, basins)
+    
